@@ -40,7 +40,8 @@ public sealed class ChordActivation
     private bool _leftSwallowed;
 
     public int MovementTolerancePx { get; set; } = 16;
-    public int HoldTimeoutMs { get; set; } = 1000;
+    /// <summary>A still, held trigger turns back into a native press after this long; generous so the rhythm hint can be read.</summary>
+    public int HoldTimeoutMs { get; set; } = 8000;
     /// <summary>Safety net in case the trigger release is never observed.</summary>
     public int MaxChordMs { get; set; } = 10000;
 

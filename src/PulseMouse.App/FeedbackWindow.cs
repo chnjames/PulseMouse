@@ -17,6 +17,14 @@ public enum FeedbackMode { Armed, Typing, Matched, Failed }
 public sealed class FeedbackWindow : Window
 {
     private const double PillWidth = 380, PillHeight = 56, Shadow = 36, BottomGap = 22, SideGap = 28;
+    /// <summary>Room reserved above the pill for the rhythm hint card.</summary>
+    private const double HintArea = 250;
+
+    private readonly Border _hint;
+    private readonly StackPanel _hintRows = new();
+    private readonly StackPanel _hintTyped = new() { Orientation = System.Windows.Controls.Orientation.Horizontal, VerticalAlignment = VerticalAlignment.Center };
+    private readonly PatternGlyph _hintTypedGlyph = new() { GlyphSize = GlyphSize.Small, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(6, 0, 0, 0) };
+    private readonly TextBlock _hintFooter;
 
     private readonly Border _pill;
     private readonly Border _orb;
@@ -38,7 +46,7 @@ public sealed class FeedbackWindow : Window
     public FeedbackWindow()
     {
         Width = PillWidth + Shadow * 2;
-        Height = PillHeight + Shadow * 2;
+        Height = HintArea + PillHeight + Shadow * 2;
         WindowStyle = WindowStyle.None;
         ResizeMode = ResizeMode.NoResize;
         AllowsTransparency = true;
@@ -83,7 +91,33 @@ public sealed class FeedbackWindow : Window
             Padding = new Thickness(10, 0, 22, 0), Child = row, Opacity = 0, RenderTransform = _slide,
             Effect = new DropShadowEffect { BlurRadius = 34, ShadowDepth = 12, Direction = 270, Opacity = 0.5, Color = Colors.Black }
         };
-        Content = new Grid { Children = { _pill } };
+
+        var hintHeader = new DockPanel { Margin = new Thickness(0, 0, 0, 8) };
+        _hintTyped.Children.Add(new TextBlock { Text = "已输入", FontSize = 11.5, Foreground = B(255, 0x6E, 0x7D, 0x82), VerticalAlignment = VerticalAlignment.Center });
+        _hintTyped.Children.Add(_hintTypedGlyph);
+        _hintTypedGlyph.Foreground = Mint;
+        DockPanel.SetDock(_hintTyped, Dock.Right);
+        hintHeader.Children.Add(_hintTyped);
+        hintHeader.Children.Add(new TrackedText
+        {
+            Text = "可用节奏", FontSize = 9.5, Tracking = 1.14, FontWeight = FontWeights.SemiBold,
+            FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"), Foreground = B(255, 0x6E, 0x7D, 0x82),
+            VerticalAlignment = VerticalAlignment.Center
+        });
+        _hintFooter = new TextBlock { FontSize = 11.5, Foreground = B(255, 0x6E, 0x7D, 0x82), Margin = new Thickness(0, 6, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
+        _hint = new Border
+        {
+            Width = PillWidth, CornerRadius = new CornerRadius(18), Background = B(0xF7, 14, 18, 22), BorderBrush = B(0x1F, 255, 255, 255),
+            BorderThickness = new Thickness(1), Padding = new Thickness(18, 12, 18, 12), Margin = new Thickness(0, 0, 0, 10),
+            Visibility = Visibility.Collapsed, Opacity = 0,
+            Child = new StackPanel { Children = { hintHeader, _hintRows, _hintFooter } },
+            Effect = new DropShadowEffect { BlurRadius = 34, ShadowDepth = 12, Direction = 270, Opacity = 0.5, Color = Colors.Black }
+        };
+        Content = new Grid
+        {
+            Margin = new Thickness(Shadow),
+            Children = { new StackPanel { VerticalAlignment = VerticalAlignment.Bottom, Children = { _hint, _pill } } }
+        };
 
         _hideTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1150) };
         _hideTimer.Tick += (_, _) => { _hideTimer.Stop(); FadeOut(); };
@@ -142,6 +176,7 @@ public sealed class FeedbackWindow : Window
         }
         if (mode is FeedbackMode.Matched or FeedbackMode.Failed)
         {
+            HideHint();
             _hideTimer.Interval = TimeSpan.FromMilliseconds(failed ? 1600 : 1150);
             _hideTimer.Start();
         }
@@ -150,7 +185,46 @@ public sealed class FeedbackWindow : Window
     public void HideNow()
     {
         _hideTimer.Stop();
+        HideHint();
         if (IsVisible) FadeOut();
+    }
+
+    public bool HintVisible => _hint.Visibility == Visibility.Visible && IsVisible && !_fading;
+
+    /// <summary>Lists the rhythms still reachable from <paramref name="typed"/> above the pill (which must already be showing).</summary>
+    public void ShowHint(string typed, IReadOnlyList<(string Pattern, string Name)> items, int hidden)
+    {
+        _hintTyped.Visibility = typed.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        _hintTypedGlyph.Pattern = typed;
+        _hintRows.Children.Clear();
+        foreach (var (pattern, name) in items)
+        {
+            var row = new Grid { Height = 26 };
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(78) });
+            row.ColumnDefinitions.Add(new ColumnDefinition());
+            var glyph = new PatternGlyph { GlyphSize = GlyphSize.Small, Pattern = pattern, Foreground = Mint, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
+            var label = new TextBlock
+            {
+                Text = name, FontSize = 13, Foreground = B(255, 0xF2, 0xF7, 0xF8), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
+                FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI")
+            };
+            Grid.SetColumn(label, 1);
+            row.Children.Add(glyph);
+            row.Children.Add(label);
+            _hintRows.Children.Add(row);
+        }
+        _hintFooter.Text = items.Count == 0 ? "没有以此开头的指令" : hidden > 0 ? $"还有 {hidden} 个，继续敲以缩小范围" : "";
+        _hintFooter.Visibility = _hintFooter.Text.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
+        if (!IsVisible || _hint.Visibility == Visibility.Visible) return;
+        _hint.Visibility = Visibility.Visible;
+        _hint.BeginAnimation(OpacityProperty, new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(160)));
+    }
+
+    public void HideHint()
+    {
+        _hint.BeginAnimation(OpacityProperty, null);
+        _hint.Opacity = 0;
+        _hint.Visibility = Visibility.Collapsed;
     }
 
     private void FadeOut()
@@ -186,7 +260,7 @@ public sealed class FeedbackWindow : Window
             _ => left + (right - left - PillWidth) / 2
         };
         Left = pillLeft - Shadow;
-        Top = bottom - BottomGap - PillHeight - Shadow;
+        Top = bottom - BottomGap - PillHeight - Shadow - HintArea;
     }
 
     [DllImport("user32.dll", EntryPoint = "GetWindowLongPtrW", SetLastError = true)]

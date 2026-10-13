@@ -61,7 +61,10 @@ public sealed class MouseHook : IDisposable
     public bool ChordActive => Mode == MouseInputMode.Chord || (Mode == MouseInputMode.Auto && _autoSide == 0);
     public event Action<MouseButtonEvent>? RawButtonEvent;
     public event Action<bool, long>? ButtonEvent;
-    /// <summary>Chord lifecycle: <see cref="ChordStep.Begin"/>, <see cref="ChordStep.Commit"/> or <see cref="ChordStep.Cancel"/>.</summary>
+    /// <summary>
+    /// Chord lifecycle: <see cref="ChordStep.Swallow"/> (trigger held back), <see cref="ChordStep.Begin"/>, <see cref="ChordStep.Commit"/>,
+    /// <see cref="ChordStep.Cancel"/>, or <see cref="ChordStep.ReplayDown"/>/<see cref="ChordStep.ReplayClick"/> (handed back to the app).
+    /// </summary>
     public event Action<ChordStep, long>? ChordEvent;
     public event Action<string>? StateChanged;
     public MouseHook() => _callback = HookCallback;
@@ -238,6 +241,7 @@ public sealed class MouseHook : IDisposable
             case ChordStep.ReplayDown:
                 ReplayPressAtOrigin();
                 ChordNote(ticks, $"按住超过 {_chord.HoldTimeoutMs} ms 未按左键，补发右键按下并放行");
+                ChordEvent?.Invoke(ChordStep.ReplayDown, ticks);
                 break;
             case ChordStep.Cancel:
                 ChordNote(ticks, "和弦超时，已放弃本次输入");
@@ -269,7 +273,10 @@ public sealed class MouseHook : IDisposable
             _ => ChordStep.Pass
         };
         if (message == WmRDown && step == ChordStep.Swallow)
+        {
             RawButtonEvent?.Invoke(new("右键", true, ticks, true, injected ? $"和弦：等待左键节奏（模拟输入，标记 0x{info.ExtraInfo:X}）" : "和弦：等待左键节奏"));
+            ChordEvent?.Invoke(ChordStep.Swallow, ticks);
+        }
         switch (step)
         {
             case ChordStep.Pass:
@@ -280,10 +287,12 @@ public sealed class MouseHook : IDisposable
                 ChordNote(ticks, message == WmMove
                     ? $"按住时移动 {Math.Sqrt(dx * dx + dy * dy):0} px（阈值 {_chord.MovementTolerancePx}），按拖拽处理，补发右键按下并放行"
                     : "按住时滚动滚轮，补发右键按下并放行");
+                ChordEvent?.Invoke(ChordStep.ReplayDown, ticks);
                 return false;
             case ChordStep.ReplayClick:
                 Inject(MouseEventRightDown, MouseEventRightUp);
                 RawButtonEvent?.Invoke(new("右键", false, ticks, false, "未输入节奏，补发右键单击"));
+                ChordEvent?.Invoke(ChordStep.ReplayClick, ticks);
                 return true;
             case ChordStep.Begin:
                 ChordEvent?.Invoke(ChordStep.Begin, ticks);

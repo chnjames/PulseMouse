@@ -59,6 +59,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl, IPageVi
         LanguageSeg.SelectedIndex = s.UiLanguage == "en-US" ? 1 : 0;
         CapsuleSwitch.IsChecked = s.FloatingFeedback;
         BreathingSwitch.IsChecked = s.CapsuleBreathing;
+        HintSwitch.IsChecked = s.HesitationHints;
         ConfirmSwitch.IsChecked = s.ConfirmWorkflows;
         FullscreenSwitch.IsChecked = s.PauseInFullscreen;
         ExcludedBox.Text = string.Join(", ", s.ExcludedApps);
@@ -179,6 +180,7 @@ public partial class SettingsView : System.Windows.Controls.UserControl, IPageVi
         s.SuccessSound = SoundSwitch.IsChecked == true;
         s.FloatingFeedback = CapsuleSwitch.IsChecked == true;
         s.CapsuleBreathing = BreathingSwitch.IsChecked == true;
+        s.HesitationHints = HintSwitch.IsChecked == true;
         s.ConfirmWorkflows = ConfirmSwitch.IsChecked == true;
         s.PauseInFullscreen = FullscreenSwitch.IsChecked == true;
         if (!s.FloatingFeedback) _c.Feedback.HideNow();
@@ -225,6 +227,8 @@ public partial class SettingsView : System.Windows.Controls.UserControl, IPageVi
     }
 
     private void PreviewClick(object sender, RoutedEventArgs e) => _c.PreviewCapsule();
+
+    private void PreviewHintClick(object sender, RoutedEventArgs e) => _c.PreviewHint();
 
     // ---------- data ----------
 

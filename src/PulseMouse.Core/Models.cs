@@ -36,6 +36,8 @@ public sealed class AppSettings
     public string UiLanguage { get; set; } = "zh-CN";
     public string CapsulePosition { get; set; } = "Center";
     public bool CapsuleBreathing { get; set; } = true;
+    /// <summary>List the reachable rhythms above the capsule when input pauses mid-way.</summary>
+    public bool HesitationHints { get; set; } = true;
     public string StatisticsDate { get; set; } = "";
     public int ExecutionsToday { get; set; }
     public int MissesToday { get; set; }

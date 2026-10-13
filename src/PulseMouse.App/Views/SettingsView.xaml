@@ -134,6 +134,16 @@
                             </StackPanel>
                         </DockPanel>
                     </Border>
+                    <Border Style="{StaticResource SRow}">
+                        <DockPanel>
+                            <ToggleButton x:Name="HintSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="14,0,0,0" Click="ToggleClick"/>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Play" c:Ui.IconSize="13" Content="预览" Margin="20,0,0,0" Click="PreviewHintClick"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock Style="{StaticResource RowName}" Text="犹豫时显示节奏清单"/>
+                                <TextBlock Style="{StaticResource RowDesc}" Text="按住右键或敲到一半停顿 0.6 秒，在胶囊上方列出还能匹配的指令"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
                     <Border Style="{StaticResource SRowLast}">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" c:Ui.Icon="Play" c:Ui.IconSize="14" Content="预览胶囊" Margin="20,0,0,0" Click="PreviewClick"/>

@@ -49,6 +49,11 @@ public sealed class PulseController : IDisposable
     public CommandBinding? HitCommand { get; private set; }
     public string PhaseMessage { get; private set; } = "";
     private long _phaseChangedMs;
+    private const int HintDelayMs = 600;
+    /// <summary>When the chord trigger started being held back; null once it is released or handed to the app.</summary>
+    private long? _triggerHeldMs;
+    private bool _holdCapsuleShown;
+    private string? _hintPrefix;
 
     /// <summary>Listening state, input route or hook status changed.</summary>
     public event Action? StateChanged;
@@ -334,6 +339,7 @@ public sealed class PulseController : IDisposable
             PressStartMs = ms;
             SetPhase(LivePhase.Press);
             if (fresh) ShowCapsule(FeedbackMode.Armed, "", _engine.GapSuspended ? "松开右键即执行" : UsesMiddle ? "指令模式已激活" : "正在输入…");
+            UpdateHint(ms);
             LiveChanged?.Invoke();
             return;
         }
@@ -375,16 +381,29 @@ public sealed class PulseController : IDisposable
     {
         _engine.GapSuspended = false;
         _engine.Reset();
+        _triggerHeldMs = null;
+        _holdCapsuleShown = false;
     }
 
     private void OnChord(ChordStep step)
     {
         switch (step)
         {
+            case ChordStep.Swallow:
+                _triggerHeldMs = NowMs;
+                break;
             case ChordStep.Begin:
                 _engine.GapSuspended = true;
+                _holdCapsuleShown = false;
+                break;
+            case ChordStep.ReplayDown:
+            case ChordStep.ReplayClick:
+                _triggerHeldMs = null;
+                if (_holdCapsuleShown) Feedback.HideNow();
+                _holdCapsuleShown = false;
                 break;
             case ChordStep.Commit:
+                _triggerHeldMs = null;
                 _engine.GapSuspended = false;
                 _engine.Commit();
                 break;
@@ -393,6 +412,33 @@ public sealed class PulseController : IDisposable
                 CancelInput(quiet: true);
                 break;
         }
+        UpdateHint(NowMs);
+    }
+
+    /// <summary>Shows the reachable rhythms once input pauses: trigger held with nothing typed, mid-chord, or middle-armed.</summary>
+    private void UpdateHint(long now)
+    {
+        string? prefix = null;
+        if (Settings.HesitationHints && Settings.FloatingFeedback && Settings.Enabled && PressStartMs is null)
+        {
+            if (_triggerHeldMs is long held)
+            {
+                long since = Sequence.Length == 0 ? held : LastReleaseMs ?? now;
+                if (now - since >= HintDelayMs) prefix = Sequence;
+            }
+            else if (Phase == LivePhase.Armed && now - _phaseChangedMs >= HintDelayMs) prefix = "";
+        }
+        if (prefix == _hintPrefix && (prefix is null || Feedback.HintVisible)) return;
+        _hintPrefix = prefix;
+        if (prefix is null) { Feedback.HideHint(); return; }
+        if (_triggerHeldMs is not null && Sequence.Length == 0 && Phase != LivePhase.Armed)
+        {
+            ShowCapsule(FeedbackMode.Armed, "", "用左键敲节奏；不敲直接松开即普通右键");
+            _holdCapsuleShown = true;
+        }
+        var (shown, hidden) = RhythmHints.For(Settings.Commands, prefix, 6);
+        try { Feedback.ShowHint(prefix, shown.Select(c => (c.Pattern, c.Name)).ToList(), hidden); }
+        catch (Exception ex) { AddLog("节奏提示显示失败: " + ex.Message, "", LogTone.Err); }
     }
 
     private char? Classify(double duration)
@@ -431,6 +477,7 @@ public sealed class PulseController : IDisposable
     {
         long now = NowMs;
         _engine.Tick(now);
+        UpdateHint(now);
         if (Phase is LivePhase.Matched or LivePhase.Miss or LivePhase.Reset && now - _phaseChangedMs > IdleAfterMs)
         {
             ResetLive();
@@ -566,6 +613,21 @@ public sealed class PulseController : IDisposable
     {
         if (!Settings.FloatingFeedback) { Shell?.Toast("请先启用状态胶囊", IconKind.Info); return; }
         Feedback.ShowState(FeedbackMode.Matched, ".-", "打开计算器 · 已发起", null);
+    }
+
+    public void PreviewHint()
+    {
+        if (!Settings.FloatingFeedback) { Shell?.Toast("请先启用状态胶囊", IconKind.Info); return; }
+        Feedback.ShowState(FeedbackMode.Armed, "", "用左键敲节奏；不敲直接松开即普通右键", null);
+        var (shown, hidden) = RhythmHints.For(Settings.Commands, "", 6);
+        Feedback.ShowHint("", shown.Select(c => (c.Pattern, c.Name)).ToList(), hidden);
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (Phase == LivePhase.Idle && _triggerHeldMs is null) Feedback.HideNow();
+        };
+        timer.Start();
     }
 
     // ---------- helpers ----------

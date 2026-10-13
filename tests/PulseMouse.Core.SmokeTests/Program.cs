@@ -50,7 +50,7 @@ Check(chord.TriggerDown(0, 10, 10, false) == ChordStep.Swallow && chord.TriggerU
 chord.TriggerDown(0, 10, 10, false);
 Check(chord.Move(12, 13) == ChordStep.Pass && chord.Move(30, 10) == ChordStep.ReplayDown && chord.TriggerUp() == ChordStep.Pass, "right drag replays press and passes through");
 chord.TriggerDown(1000, 10, 10, false);
-Check(chord.Tick(1900) == ChordStep.Pass && chord.Tick(2000) == ChordStep.ReplayDown && chord.LeftDown() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "long right hold replays press");
+Check(chord.Tick(8900) == ChordStep.Pass && chord.Tick(9000) == ChordStep.ReplayDown && chord.LeftDown() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "long right hold replays press");
 chord.Reset();
 Check(chord.TriggerDown(0, 10, 10, true) == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "right press while left held is untouched");
 chord.TriggerDown(0, 10, 10, false);
@@ -77,6 +77,14 @@ result = null; engine.Commit();
 Check(result is null, "empty commit is a no-op");
 Console.WriteLine("Chord activation tests passed.");
 
+var hintCommands = new[] { "-.", ".-", "..", "...", ".-.", "" }.Select(p => new CommandBinding { Name = p, Pattern = p }).ToList();
+var (shown, hidden) = RhythmHints.For(hintCommands, "", 3);
+Check(shown.Select(c => c.Pattern).SequenceEqual(new[] { "-.", ".-", ".." }) && hidden == 2, "hints: shortest first, empty patterns skipped, overflow counted");
+(shown, hidden) = RhythmHints.For(hintCommands, ".-", 6);
+Check(shown.Select(c => c.Pattern).SequenceEqual(new[] { ".-", ".-." }) && hidden == 0, "hints filter by typed prefix");
+Check(RhythmHints.For(hintCommands, "--", 6).Shown.Count == 0, "hints: no reachable command");
+Console.WriteLine("Rhythm hint tests passed.");
+
 var v07 = new AppSettings
 {
     StartupEnabled = true,
@@ -91,4 +99,5 @@ var roundTrip = JsonSerializer.Deserialize<AppSettings>(JsonSerializer.Serialize
 Check(roundTrip is { StartupEnabled: true, SuccessSound: true, UiLanguage: "en-US", CapsulePosition: "Right", CapsuleBreathing: false, ExecutionsToday: 12 }, "v0.7 settings round trip");
 var legacy = JsonSerializer.Deserialize<AppSettings>("{\"Enabled\":true,\"Commands\":[]}");
 Check(legacy is { Enabled: true, UiLanguage: "zh-CN", CapsulePosition: "Center", CapsuleBreathing: true }, "legacy settings receive v0.7 defaults");
+Check(legacy is { HesitationHints: true, PauseInFullscreen: true, DetectedSideButton: 0, ExcludedApps.Count: 0 }, "legacy settings receive v0.8 interception defaults");
 Console.WriteLine("V0.7 settings compatibility tests passed.");
