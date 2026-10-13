@@ -104,7 +104,7 @@
                                     <TextBlock Style="{StaticResource RadioTitle}" Text="自动适配"/>
                                     <c:KindChip Kind="Muted" Text="推荐" Height="18" Margin="6,0,0,0"/>
                                 </StackPanel>
-                                <TextBlock Style="{StaticResource RadioDesc}" Text="侧键优先；未检测到侧键时使用中键长按"/>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="检测到侧键用侧键；否则用右键 + 左键和弦"/>
                             </StackPanel>
                         </ListBoxItem>
                         <ListBoxItem>

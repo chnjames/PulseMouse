@@ -141,12 +141,9 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
             case LivePhase.Reset: chip = "已重置"; chipTone = "bad"; state1 = "本次输入无效"; sub = _c.PhaseMessage; break;
             default:
                 chip = "待命"; state1 = "等待输入";
-                sub = s.InputMode switch
-                {
-                    MouseInputMode.Middle => $"静止长按中键 {s.MiddleHoldMs} ms 激活，然后用左键输入节奏",
-                    MouseInputMode.Chord => "按住右键，用左键敲节奏；松开右键立即执行",
-                    _ => "按住侧键输入节奏；松开后停顿即提交"
-                };
+                sub = _c.IsChordMode ? "按住右键，用左键敲节奏；松开右键立即执行"
+                    : s.InputMode == MouseInputMode.Middle ? $"静止长按中键 {s.MiddleHoldMs} ms 激活，然后用左键输入节奏"
+                    : "按住侧键输入节奏；松开后停顿即提交";
                 break;
         }
         var (fg, border, bg) = chipTone switch

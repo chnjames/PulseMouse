@@ -230,10 +230,10 @@ public sealed class PulseController : IDisposable
         _ => _hook.ActiveInput
     };
 
-    public bool IsChordMode => Settings.InputMode == MouseInputMode.Chord;
+    public bool IsChordMode => _hook.ChordActive;
 
     /// <summary>Which button currently types rhythms (used for log lines of simulated input).</summary>
-    private bool UsesMiddle => Settings.InputMode == MouseInputMode.Middle || (Settings.InputMode == MouseInputMode.Auto && _hook.ActiveInput.Contains("中键"));
+    private bool UsesMiddle => Settings.InputMode == MouseInputMode.Middle;
     private bool UsesLeft => UsesMiddle || IsChordMode;
 
     public void InstallHook()
@@ -242,7 +242,7 @@ public sealed class PulseController : IDisposable
         {
             _hook.Install();
             _hook.Enabled = Settings.Enabled;
-            AddLog("Hook 安装成功；可按 X1/X2 检测侧键，或长按中键后用左键输入", "", LogTone.None);
+            AddLog("Hook 安装成功；" + ActiveInputText, "", LogTone.None);
         }
         catch (Exception ex)
         {

@@ -38,10 +38,12 @@ public sealed class MouseHook : IDisposable
     public bool IsInstalled => _handle != 0;
     public string ActiveInput => Mode switch
     {
-        MouseInputMode.Auto => _autoSide == 0 ? "自动：侧键优先 / 中键备用" : $"自动：X{_autoSide}（已观察到）",
+        MouseInputMode.Auto => _autoSide == 0 ? "自动：右键 + 左键和弦（按一下侧键即改用侧键）" : $"自动：X{_autoSide} 侧键（已检测到）",
         MouseInputMode.Chord => "右键 + 左键 和弦",
         _ => Mode.ToString()
     };
+    /// <summary>Right+left chord is the rhythm input: chosen explicitly, or by Auto until a side button is seen.</summary>
+    public bool ChordActive => Mode == MouseInputMode.Chord || (Mode == MouseInputMode.Auto && _autoSide == 0);
     public event Action<MouseButtonEvent>? RawButtonEvent;
     public event Action<bool, long>? ButtonEvent;
     /// <summary>Chord lifecycle: <see cref="ChordStep.Begin"/>, <see cref="ChordStep.Commit"/> or <see cref="ChordStep.Cancel"/>.</summary>
@@ -83,7 +85,7 @@ public sealed class MouseHook : IDisposable
 
             CheckTimeout(ticks);
             if (userInput && HandleChord((int)wParam, ticks, info, injected)) return 1;
-            if (echo && Enabled && Mode == MouseInputMode.Chord)
+            if (echo && Enabled && ChordActive)
                 RawButtonEvent?.Invoke(new("右键", true, ticks, false, $"其他程序紧接着补发的右键（标记 0x{info.ExtraInfo:X}），放行以免循环"));
             if (wParam == WmMove && _middle.IsPressingMiddle)
             {
@@ -96,7 +98,7 @@ public sealed class MouseHook : IDisposable
                 if (button is 1 or 2)
                 {
                     bool down = wParam == WmXDown;
-                    if (Enabled && Mode == MouseInputMode.Auto && _autoSide == 0 && !_middle.Armed && down)
+                    if (Enabled && Mode == MouseInputMode.Auto && _autoSide == 0 && _chord.IsIdle && down)
                     {
                         _autoSide = button;
                         _middle.Disarm();
@@ -121,8 +123,8 @@ public sealed class MouseHook : IDisposable
             else if (wParam == WmMDown || wParam == WmMUp)
             {
                 bool down = wParam == WmMDown;
-                bool eligible = Enabled && (Mode == MouseInputMode.Middle || (Mode == MouseInputMode.Auto && _autoSide == 0));
-                bool gestureEligible = eligible || (Enabled && Mode == MouseInputMode.Chord);
+                bool eligible = Enabled && Mode == MouseInputMode.Middle;
+                bool gestureEligible = eligible || (Enabled && ChordActive);
                 long ms = ToMs(ticks);
                 if (down)
                 {
@@ -151,7 +153,7 @@ public sealed class MouseHook : IDisposable
             else if (wParam == WmLDown || wParam == WmLUp)
             {
                 bool down = wParam == WmLDown;
-                bool consume = Enabled && _middle.Armed && (Mode == MouseInputMode.Middle || (Mode == MouseInputMode.Auto && _autoSide == 0));
+                bool consume = Enabled && _middle.Armed && Mode == MouseInputMode.Middle;
                 if (consume)
                 {
                     if (down) _leftIsDown = true;
@@ -193,7 +195,7 @@ public sealed class MouseHook : IDisposable
     /// <summary>Right button held + left button taps; returns true when the event must be swallowed.</summary>
     private bool HandleChord(int message, long ticks, in MsLlHookStruct info, bool injected)
     {
-        bool chordMode = Enabled && Mode == MouseInputMode.Chord;
+        bool chordMode = Enabled && ChordActive;
         if (!chordMode && _chord.IsIdle) return false;
         var step = message switch
         {
