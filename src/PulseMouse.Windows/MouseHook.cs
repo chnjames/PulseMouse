@@ -24,6 +24,7 @@ public sealed class MouseHook : IDisposable
     private readonly ChordActivation _chord = new();
     private bool _leftIsDown;
     private bool _physicalLeftDown;
+    private long _lastReplayMs = long.MinValue / 2;
     private readonly GestureRecognizer _gesture = new();
     private bool _gestureReady;
     public bool GesturesEnabled { get; set; } = true;
@@ -73,11 +74,17 @@ public sealed class MouseHook : IDisposable
             var info = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
             if (info.ExtraInfo == InjectionMarker) return CallNextHookEx(_handle, nCode, wParam, lParam);
             bool injected = (info.Flags & LlmhfInjected) != 0;
-            if (!injected && wParam == WmLDown) _physicalLeftDown = true;
-            else if (!injected && wParam == WmLUp) _physicalLeftDown = false;
+            // Remote-control tools (ToDesk tags 0x77, RDP…) deliver the user's real clicks as injected input. A tagged
+            // right press right after our own replay is another hook re-sending it; swallowing that again would loop.
+            bool echo = injected && info.ExtraInfo != 0 && wParam == WmRDown && ToMs(ticks) - _lastReplayMs < 150;
+            bool userInput = !echo;
+            if (userInput && wParam == WmLDown) _physicalLeftDown = true;
+            else if (userInput && wParam == WmLUp) _physicalLeftDown = false;
 
             CheckTimeout(ticks);
-            if (!injected && HandleChord((int)wParam, ticks, info)) return 1;
+            if (userInput && HandleChord((int)wParam, ticks, info, injected)) return 1;
+            if (echo && Enabled && Mode == MouseInputMode.Chord)
+                RawButtonEvent?.Invoke(new("右键", true, ticks, false, $"其他程序紧接着补发的右键（标记 0x{info.ExtraInfo:X}），放行以免循环"));
             if (wParam == WmMove && _middle.IsPressingMiddle)
             {
                 _middle.Move(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
@@ -184,7 +191,7 @@ public sealed class MouseHook : IDisposable
     private void ChordNote(long ticks, string note) => RawButtonEvent?.Invoke(new("右键", true, ticks, false, note));
 
     /// <summary>Right button held + left button taps; returns true when the event must be swallowed.</summary>
-    private bool HandleChord(int message, long ticks, in MsLlHookStruct info)
+    private bool HandleChord(int message, long ticks, in MsLlHookStruct info, bool injected)
     {
         bool chordMode = Enabled && Mode == MouseInputMode.Chord;
         if (!chordMode && _chord.IsIdle) return false;
@@ -199,7 +206,7 @@ public sealed class MouseHook : IDisposable
             _ => ChordStep.Pass
         };
         if (message == WmRDown && step == ChordStep.Swallow)
-            RawButtonEvent?.Invoke(new("右键", true, ticks, true, "和弦：等待左键节奏"));
+            RawButtonEvent?.Invoke(new("右键", true, ticks, true, injected ? $"和弦：等待左键节奏（模拟输入，标记 0x{info.ExtraInfo:X}）" : "和弦：等待左键节奏"));
         switch (step)
         {
             case ChordStep.Pass:
@@ -241,8 +248,9 @@ public sealed class MouseHook : IDisposable
         }
     }
 
-    private static void Inject(params uint[] flags)
+    private void Inject(params uint[] flags)
     {
+        _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
         var inputs = new Input[flags.Length];
         for (int i = 0; i < flags.Length; i++)
             inputs[i] = new Input { Type = 0, Mouse = new MouseInput { Flags = flags[i], ExtraInfo = InjectionMarker } };
@@ -253,6 +261,7 @@ public sealed class MouseHook : IDisposable
     private void ReplayPressAtOrigin(int? x = null, int? y = null)
     {
         // Hook coordinates are physical pixels; measure the desktop the same way regardless of process DPI awareness.
+        _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
         nint previous = SetThreadDpiAwarenessContext(-4);
         try
         {
