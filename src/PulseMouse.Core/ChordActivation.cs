@@ -39,14 +39,18 @@ public sealed class ChordActivation
     private int _x, _y;
     private bool _leftSwallowed;
 
-    public int MovementTolerancePx { get; set; } = 8;
-    public int HoldTimeoutMs { get; set; } = 600;
+    public int MovementTolerancePx { get; set; } = 16;
+    public int HoldTimeoutMs { get; set; } = 1000;
     /// <summary>Safety net in case the trigger release is never observed.</summary>
     public int MaxChordMs { get; set; } = 10000;
 
     /// <summary>A rhythm is being entered; pauses must not complete it.</summary>
     public bool IsChording => _state is State.Chording or State.Releasing;
     public bool IsIdle => _state == State.Idle && !_leftSwallowed;
+    /// <summary>Where the held trigger was pressed; replays happen here.</summary>
+    public int OriginX => _x;
+    public int OriginY => _y;
+    public long PressedAtMs => _downAt;
 
     public ChordStep TriggerDown(long ms, int x, int y, bool leftHeld)
     {

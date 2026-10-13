@@ -50,7 +50,7 @@ Check(chord.TriggerDown(0, 10, 10, false) == ChordStep.Swallow && chord.TriggerU
 chord.TriggerDown(0, 10, 10, false);
 Check(chord.Move(12, 13) == ChordStep.Pass && chord.Move(30, 10) == ChordStep.ReplayDown && chord.TriggerUp() == ChordStep.Pass, "right drag replays press and passes through");
 chord.TriggerDown(1000, 10, 10, false);
-Check(chord.Tick(1500) == ChordStep.Pass && chord.Tick(1600) == ChordStep.ReplayDown && chord.LeftDown() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "long right hold replays press");
+Check(chord.Tick(1900) == ChordStep.Pass && chord.Tick(2000) == ChordStep.ReplayDown && chord.LeftDown() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "long right hold replays press");
 chord.Reset();
 Check(chord.TriggerDown(0, 10, 10, true) == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "right press while left held is untouched");
 chord.TriggerDown(0, 10, 10, false);

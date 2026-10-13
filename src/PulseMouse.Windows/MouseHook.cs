@@ -170,10 +170,18 @@ public sealed class MouseHook : IDisposable
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
         switch (_chord.Tick(ToMs(ticks)))
         {
-            case ChordStep.ReplayDown: Inject(MouseEventRightDown); break;
-            case ChordStep.Cancel: ChordEvent?.Invoke(ChordStep.Cancel, ticks); break;
+            case ChordStep.ReplayDown:
+                ReplayPressAtOrigin();
+                ChordNote(ticks, $"按住超过 {_chord.HoldTimeoutMs} ms 未按左键，补发右键按下并放行");
+                break;
+            case ChordStep.Cancel:
+                ChordNote(ticks, "和弦超时，已放弃本次输入");
+                ChordEvent?.Invoke(ChordStep.Cancel, ticks);
+                break;
         }
     }
+
+    private void ChordNote(long ticks, string note) => RawButtonEvent?.Invoke(new("右键", true, ticks, false, note));
 
     /// <summary>Right button held + left button taps; returns true when the event must be swallowed.</summary>
     private bool HandleChord(int message, long ticks, in MsLlHookStruct info)
@@ -190,15 +198,22 @@ public sealed class MouseHook : IDisposable
             WmWheel or WmHWheel => _chord.Wheel(),
             _ => ChordStep.Pass
         };
+        if (message == WmRDown && step == ChordStep.Swallow)
+            RawButtonEvent?.Invoke(new("右键", true, ticks, true, "和弦：等待左键节奏"));
         switch (step)
         {
             case ChordStep.Pass:
                 return false;
             case ChordStep.ReplayDown:
-                Inject(MouseEventRightDown);
+                long dx = info.X - _chord.OriginX, dy = info.Y - _chord.OriginY;
+                if (message == WmMove) ReplayPressAtOrigin(info.X, info.Y); else ReplayPressAtOrigin();
+                ChordNote(ticks, message == WmMove
+                    ? $"按住时移动 {Math.Sqrt(dx * dx + dy * dy):0} px（阈值 {_chord.MovementTolerancePx}），按拖拽处理，补发右键按下并放行"
+                    : "按住时滚动滚轮，补发右键按下并放行");
                 return false;
             case ChordStep.ReplayClick:
                 Inject(MouseEventRightDown, MouseEventRightUp);
+                RawButtonEvent?.Invoke(new("右键", false, ticks, false, "未输入节奏，补发右键单击"));
                 return true;
             case ChordStep.Begin:
                 ChordEvent?.Invoke(ChordStep.Begin, ticks);
@@ -214,7 +229,11 @@ public sealed class MouseHook : IDisposable
                 if (step == ChordStep.PulseUpCommit) ChordEvent?.Invoke(ChordStep.Commit, ticks);
                 return true;
             case ChordStep.Commit:
+                RawButtonEvent?.Invoke(new("右键", false, ticks, true, "和弦：松开右键，提交节奏"));
+                ChordEvent?.Invoke(step, ticks);
+                return true;
             case ChordStep.Cancel:
+                RawButtonEvent?.Invoke(new("滚轮", true, ticks, true, "和弦：滚动滚轮，取消本次输入"));
                 ChordEvent?.Invoke(step, ticks);
                 return true;
             default:
@@ -228,6 +247,46 @@ public sealed class MouseHook : IDisposable
         for (int i = 0; i < flags.Length; i++)
             inputs[i] = new Input { Type = 0, Mouse = new MouseInput { Flags = flags[i], ExtraInfo = InjectionMarker } };
         SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+    }
+
+    /// <summary>Replays the held right press where it happened, then returns the cursor to (x, y) or its current position.</summary>
+    private void ReplayPressAtOrigin(int? x = null, int? y = null)
+    {
+        // Hook coordinates are physical pixels; measure the desktop the same way regardless of process DPI awareness.
+        nint previous = SetThreadDpiAwarenessContext(-4);
+        try
+        {
+            GetCursorPos(out var now);
+            var inputs = new[]
+            {
+                AbsoluteMove(_chord.OriginX, _chord.OriginY),
+                new Input { Type = 0, Mouse = new MouseInput { Flags = MouseEventRightDown, ExtraInfo = InjectionMarker } },
+                AbsoluteMove(x ?? now.X, y ?? now.Y),
+            };
+            SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+        }
+        finally
+        {
+            if (previous != 0) SetThreadDpiAwarenessContext(previous);
+        }
+    }
+
+    private static Input AbsoluteMove(int x, int y)
+    {
+        const uint move = 0x0001, virtualDesk = 0x4000, absolute = 0x8000;
+        int left = GetSystemMetrics(76), top = GetSystemMetrics(77);
+        int width = Math.Max(2, GetSystemMetrics(78)), height = Math.Max(2, GetSystemMetrics(79));
+        return new Input
+        {
+            Type = 0,
+            Mouse = new MouseInput
+            {
+                Dx = (int)Math.Round((x - left) * 65535.0 / (width - 1)),
+                Dy = (int)Math.Round((y - top) * 65535.0 / (height - 1)),
+                Flags = move | absolute | virtualDesk,
+                ExtraInfo = InjectionMarker
+            }
+        };
     }
 
     public void CancelInput()
@@ -258,6 +317,10 @@ public sealed class MouseHook : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     private struct Input { public uint Type; public MouseInput Mouse; }
     [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
+    [StructLayout(LayoutKind.Sequential)] private struct Point { public int X, Y; }
+    [DllImport("user32.dll")] private static extern bool GetCursorPos(out Point point);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
+    [DllImport("user32.dll")] private static extern nint SetThreadDpiAwarenessContext(nint context);
     [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int idHook, HookProc callback, nint module, uint threadId);
     [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hook, int nCode, nint wParam, nint lParam);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnhookWindowsHookEx(nint hook);
