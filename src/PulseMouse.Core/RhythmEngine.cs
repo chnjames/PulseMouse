@@ -7,6 +7,8 @@ public sealed class RhythmEngine
     private long? _lastRelease;
     private string _sequence = "";
     public string Sequence => _sequence;
+    /// <summary>While true a pause never completes the sequence; the caller completes it with <see cref="Commit"/>.</summary>
+    public bool GapSuspended { get; set; }
     public event Action<string>? SequenceChanged;
     public event Action<Recognition>? Completed;
     public RhythmEngine(Func<AppSettings> settings) => _settings = settings;
@@ -32,8 +34,13 @@ public sealed class RhythmEngine
     }
     public void Tick(long now)
     {
-        if (_pressedAt is not null || _lastRelease is not long end) return;
+        if (GapSuspended || _pressedAt is not null || _lastRelease is not long end) return;
         if (now - end >= _settings().SequenceGapMs) Finish();
+    }
+    public void Commit()
+    {
+        if (_pressedAt is not null) return;
+        Finish();
     }
     public void Reset()
     {

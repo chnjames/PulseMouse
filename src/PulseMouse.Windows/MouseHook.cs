@@ -14,10 +14,16 @@ public sealed class MouseHook : IDisposable
     private const int WmLDown = 0x0201, WmLUp = 0x0202, WmMove = 0x0200;
     private const int WmMDown = 0x0207, WmMUp = 0x0208;
     private const int WmXDown = 0x020B, WmXUp = 0x020C;
+    private const int WmRDown = 0x0204, WmRUp = 0x0205, WmWheel = 0x020A, WmHWheel = 0x020E;
+    private const uint LlmhfInjected = 0x01;
+    private const uint MouseEventRightDown = 0x0008, MouseEventRightUp = 0x0010;
+    private static readonly nuint InjectionMarker = 0x50554C53;
     private readonly HookProc _callback;
     private nint _handle;
     private readonly MiddleActivation _middle = new();
+    private readonly ChordActivation _chord = new();
     private bool _leftIsDown;
+    private bool _physicalLeftDown;
     private readonly GestureRecognizer _gesture = new();
     private bool _gestureReady;
     public bool GesturesEnabled { get; set; } = true;
@@ -29,11 +35,16 @@ public sealed class MouseHook : IDisposable
     public int MiddleHoldMs { get => _middle.MinimumHoldMs; set => _middle.MinimumHoldMs = Math.Clamp(value, 300, 2000); }
     public bool MiddleArmed => _middle.Armed;
     public bool IsInstalled => _handle != 0;
-    public string ActiveInput => Mode == MouseInputMode.Auto
-        ? (_autoSide == 0 ? "自动：侧键优先 / 中键备用" : $"自动：X{_autoSide}（已观察到）")
-        : Mode.ToString();
+    public string ActiveInput => Mode switch
+    {
+        MouseInputMode.Auto => _autoSide == 0 ? "自动：侧键优先 / 中键备用" : $"自动：X{_autoSide}（已观察到）",
+        MouseInputMode.Chord => "右键 + 左键 和弦",
+        _ => Mode.ToString()
+    };
     public event Action<MouseButtonEvent>? RawButtonEvent;
     public event Action<bool, long>? ButtonEvent;
+    /// <summary>Chord lifecycle: <see cref="ChordStep.Begin"/>, <see cref="ChordStep.Commit"/> or <see cref="ChordStep.Cancel"/>.</summary>
+    public event Action<ChordStep, long>? ChordEvent;
     public event Action<string>? StateChanged;
     public MouseHook() => _callback = HookCallback;
 
@@ -46,6 +57,7 @@ public sealed class MouseHook : IDisposable
 
     public void ResetInput()
     {
+        _chord.Reset();
         _middle.Disarm();
         _gesture.Cancel(); _gestureReady = false;
         _leftIsDown = false;
@@ -58,7 +70,14 @@ public sealed class MouseHook : IDisposable
         long ticks = Stopwatch.GetTimestamp();
         try
         {
+            var info = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
+            if (info.ExtraInfo == InjectionMarker) return CallNextHookEx(_handle, nCode, wParam, lParam);
+            bool injected = (info.Flags & LlmhfInjected) != 0;
+            if (!injected && wParam == WmLDown) _physicalLeftDown = true;
+            else if (!injected && wParam == WmLUp) _physicalLeftDown = false;
+
             CheckTimeout(ticks);
+            if (!injected && HandleChord((int)wParam, ticks, info)) return 1;
             if (wParam == WmMove && _middle.IsPressingMiddle)
             {
                 _middle.Move(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
@@ -96,11 +115,12 @@ public sealed class MouseHook : IDisposable
             {
                 bool down = wParam == WmMDown;
                 bool eligible = Enabled && (Mode == MouseInputMode.Middle || (Mode == MouseInputMode.Auto && _autoSide == 0));
+                bool gestureEligible = eligible || (Enabled && Mode == MouseInputMode.Chord);
                 long ms = ToMs(ticks);
                 if (down)
                 {
                     _middle.Down(ms, Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
-                    _gestureReady = eligible && GesturesEnabled;
+                    _gestureReady = gestureEligible && GesturesEnabled;
                     _gesture.Configure(GestureMinDistancePx);
                     if (_gestureReady) _gesture.Start(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
                 }
@@ -109,7 +129,7 @@ public sealed class MouseHook : IDisposable
                     string? direction = _gestureReady ? _gesture.End(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4)) : null;
                     _gestureReady = false;
                     bool activated = _middle.Up(ms);
-                    if (eligible && direction is not null)
+                    if (gestureEligible && direction is not null)
                     {
                         _middle.Disarm();
                         GestureEvent?.Invoke(direction);
@@ -148,9 +168,71 @@ public sealed class MouseHook : IDisposable
     public void CheckTimeout(long ticks)
     {
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
+        switch (_chord.Tick(ToMs(ticks)))
+        {
+            case ChordStep.ReplayDown: Inject(MouseEventRightDown); break;
+            case ChordStep.Cancel: ChordEvent?.Invoke(ChordStep.Cancel, ticks); break;
+        }
     }
+
+    /// <summary>Right button held + left button taps; returns true when the event must be swallowed.</summary>
+    private bool HandleChord(int message, long ticks, in MsLlHookStruct info)
+    {
+        bool chordMode = Enabled && Mode == MouseInputMode.Chord;
+        if (!chordMode && _chord.IsIdle) return false;
+        var step = message switch
+        {
+            WmRDown => chordMode ? _chord.TriggerDown(ToMs(ticks), info.X, info.Y, _physicalLeftDown) : ChordStep.Pass,
+            WmRUp => _chord.TriggerUp(),
+            WmLDown => _chord.LeftDown(),
+            WmLUp => _chord.LeftUp(),
+            WmMove => _chord.Move(info.X, info.Y),
+            WmWheel or WmHWheel => _chord.Wheel(),
+            _ => ChordStep.Pass
+        };
+        switch (step)
+        {
+            case ChordStep.Pass:
+                return false;
+            case ChordStep.ReplayDown:
+                Inject(MouseEventRightDown);
+                return false;
+            case ChordStep.ReplayClick:
+                Inject(MouseEventRightDown, MouseEventRightUp);
+                return true;
+            case ChordStep.Begin:
+                ChordEvent?.Invoke(ChordStep.Begin, ticks);
+                RawButtonEvent?.Invoke(new("左键", true, ticks, true, "和弦节奏输入（按住右键）"));
+                ButtonEvent?.Invoke(true, ticks);
+                return true;
+            case ChordStep.PulseDown:
+            case ChordStep.PulseUp:
+            case ChordStep.PulseUpCommit:
+                bool down = step == ChordStep.PulseDown;
+                RawButtonEvent?.Invoke(new("左键", down, ticks, true, "和弦节奏输入（按住右键）"));
+                ButtonEvent?.Invoke(down, ticks);
+                if (step == ChordStep.PulseUpCommit) ChordEvent?.Invoke(ChordStep.Commit, ticks);
+                return true;
+            case ChordStep.Commit:
+            case ChordStep.Cancel:
+                ChordEvent?.Invoke(step, ticks);
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    private static void Inject(params uint[] flags)
+    {
+        var inputs = new Input[flags.Length];
+        for (int i = 0; i < flags.Length; i++)
+            inputs[i] = new Input { Type = 0, Mouse = new MouseInput { Flags = flags[i], ExtraInfo = InjectionMarker } };
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+    }
+
     public void CancelInput()
     {
+        _chord.Cancel();
         _gesture.Cancel(); _gestureReady = false;
         _middle.Disarm(); _leftIsDown = false;
         StateChanged?.Invoke("已取消本次输入");
@@ -169,6 +251,13 @@ public sealed class MouseHook : IDisposable
         GC.SuppressFinalize(this);
     }
     private delegate nint HookProc(int nCode, nint wParam, nint lParam);
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MsLlHookStruct { public int X, Y; public uint MouseData, Flags, Time; public nuint ExtraInfo; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MouseInput { public int Dx, Dy; public uint MouseData, Flags, Time; public nuint ExtraInfo; }
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Input { public uint Type; public MouseInput Mouse; }
+    [DllImport("user32.dll", SetLastError = true)] private static extern uint SendInput(uint count, Input[] inputs, int size);
     [DllImport("user32.dll", SetLastError = true)] private static extern nint SetWindowsHookEx(int idHook, HookProc callback, nint module, uint threadId);
     [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hook, int nCode, nint wParam, nint lParam);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnhookWindowsHookEx(nint hook);

@@ -81,6 +81,7 @@ public sealed class PulseController : IDisposable
         _hook.ButtonEvent += (down, ticks) =>
             // Hook callback: only enqueue, never execute work or touch WPF here.
             _dispatcher.BeginInvoke(DispatcherPriority.Input, () => OnButton(down, ticks * 1000 / Stopwatch.Frequency));
+        _hook.ChordEvent += (step, _) => _dispatcher.BeginInvoke(DispatcherPriority.Input, () => OnChord(step));
         _hook.RawButtonEvent += ev => _dispatcher.BeginInvoke(DispatcherPriority.Background, () => OnRawButton(ev));
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(40), DispatcherPriority.Background, (_, _) => OnTick(), _dispatcher);
@@ -187,7 +188,7 @@ public sealed class PulseController : IDisposable
         if (Settings.Enabled == enabled) return;
         Settings.Enabled = enabled;
         _hook.Enabled = enabled && _hook.IsInstalled;
-        _engine.Reset();
+        ResetEngine();
         _hook.ResetInput();
         ResetLive();
         if (!enabled) Feedback.HideNow();
@@ -203,7 +204,7 @@ public sealed class PulseController : IDisposable
         Settings.InputMode = mode;
         _hook.Mode = mode;
         _hook.ResetInput();
-        _engine.Reset();
+        ResetEngine();
         ResetLive();
         AddLog("输入方式切换为：" + RouteName(mode), "", LogTone.None);
         Save();
@@ -216,6 +217,7 @@ public sealed class PulseController : IDisposable
         MouseInputMode.X1 => "X1 · 后退侧键",
         MouseInputMode.X2 => "X2 · 前进侧键",
         MouseInputMode.Middle => "中键长按 + 左键",
+        MouseInputMode.Chord => "右键 + 左键 · 和弦",
         _ => "自动适配"
     };
 
@@ -224,11 +226,15 @@ public sealed class PulseController : IDisposable
         MouseInputMode.X1 => "X1 后退侧键",
         MouseInputMode.X2 => "X2 前进侧键",
         MouseInputMode.Middle => "中键长按 + 左键",
+        MouseInputMode.Chord => "按住右键 + 左键",
         _ => _hook.ActiveInput
     };
 
+    public bool IsChordMode => Settings.InputMode == MouseInputMode.Chord;
+
     /// <summary>Which button currently types rhythms (used for log lines of simulated input).</summary>
     private bool UsesMiddle => Settings.InputMode == MouseInputMode.Middle || (Settings.InputMode == MouseInputMode.Auto && _hook.ActiveInput.Contains("中键"));
+    private bool UsesLeft => UsesMiddle || IsChordMode;
 
     public void InstallHook()
     {
@@ -250,7 +256,7 @@ public sealed class PulseController : IDisposable
     {
         _hook.Dispose();
         _hook.ResetInput();
-        _engine.Reset();
+        ResetEngine();
         ResetLive();
         InstallHook();
         if (_hook.IsInstalled) Shell?.Toast("监听已重新安装");
@@ -261,7 +267,7 @@ public sealed class PulseController : IDisposable
     {
         bool active = Sequence.Length > 0 || PressStartMs is not null || Phase is LivePhase.Armed or LivePhase.Press or LivePhase.Typing;
         _hook.CancelInput();
-        _engine.Reset();
+        ResetEngine();
         ResetLive();
         Feedback.HideNow();
         LiveChanged?.Invoke();
@@ -286,7 +292,7 @@ public sealed class PulseController : IDisposable
         OnButton(false, now);
     }
 
-    private string SimButton => UsesMiddle ? "左键" : Settings.InputMode == MouseInputMode.X1 ? "X1" : "X2";
+    private string SimButton => UsesLeft ? "左键" : Settings.InputMode == MouseInputMode.X1 ? "X1" : "X2";
 
     // ---------- engine plumbing ----------
 
@@ -299,7 +305,7 @@ public sealed class PulseController : IDisposable
             _engine.Down(ms);
             PressStartMs = ms;
             SetPhase(LivePhase.Press);
-            if (fresh) ShowCapsule(FeedbackMode.Armed, "", UsesMiddle ? "指令模式已激活" : "正在输入…");
+            if (fresh) ShowCapsule(FeedbackMode.Armed, "", _engine.GapSuspended ? "松开右键即执行" : UsesMiddle ? "指令模式已激活" : "正在输入…");
             LiveChanged?.Invoke();
             return;
         }
@@ -335,6 +341,30 @@ public sealed class PulseController : IDisposable
             ShowCapsule(FeedbackMode.Failed, "", PhaseMessage.Split('，')[0]);
         }
         LiveChanged?.Invoke();
+    }
+
+    private void ResetEngine()
+    {
+        _engine.GapSuspended = false;
+        _engine.Reset();
+    }
+
+    private void OnChord(ChordStep step)
+    {
+        switch (step)
+        {
+            case ChordStep.Begin:
+                _engine.GapSuspended = true;
+                break;
+            case ChordStep.Commit:
+                _engine.GapSuspended = false;
+                _engine.Commit();
+                break;
+            case ChordStep.Cancel:
+                AddLog("和弦输入已取消", "", LogTone.None);
+                CancelInput(quiet: true);
+                break;
+        }
     }
 
     private char? Classify(double duration)

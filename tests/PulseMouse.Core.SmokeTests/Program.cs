@@ -45,6 +45,38 @@ gesture.Start(100,100); Check(gesture.End(180,180) is null, "diagonal rejected")
 gesture.Start(100,100); gesture.Cancel(); Check(gesture.End(200,100) is null, "cancel gesture");
 Console.WriteLine("Gesture tests passed.");
 
+var chord = new ChordActivation();
+Check(chord.TriggerDown(0, 10, 10, false) == ChordStep.Swallow && chord.TriggerUp() == ChordStep.ReplayClick && chord.IsIdle, "right tap replays a click");
+chord.TriggerDown(0, 10, 10, false);
+Check(chord.Move(12, 13) == ChordStep.Pass && chord.Move(30, 10) == ChordStep.ReplayDown && chord.TriggerUp() == ChordStep.Pass, "right drag replays press and passes through");
+chord.TriggerDown(1000, 10, 10, false);
+Check(chord.Tick(1500) == ChordStep.Pass && chord.Tick(1600) == ChordStep.ReplayDown && chord.LeftDown() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "long right hold replays press");
+chord.Reset();
+Check(chord.TriggerDown(0, 10, 10, true) == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "right press while left held is untouched");
+chord.TriggerDown(0, 10, 10, false);
+Check(chord.LeftDown() == ChordStep.Begin && chord.IsChording && chord.LeftUp() == ChordStep.PulseUp
+      && chord.LeftDown() == ChordStep.PulseDown && chord.LeftUp() == ChordStep.PulseUp
+      && chord.TriggerUp() == ChordStep.Commit && chord.IsIdle, "chord taps then release commits");
+chord.TriggerDown(0, 10, 10, false);
+Check(chord.LeftDown() == ChordStep.Begin && chord.TriggerUp() == ChordStep.Swallow && chord.LeftUp() == ChordStep.PulseUpCommit && chord.IsIdle, "trigger released first commits after pulse");
+chord.TriggerDown(0, 10, 10, false); chord.LeftDown(); chord.LeftUp();
+Check(chord.Move(300, 300) == ChordStep.Pass && chord.IsChording, "movement during chord keeps rhythm");
+Check(chord.Wheel() == ChordStep.Cancel && chord.LeftDown() == ChordStep.Swallow && chord.LeftUp() == ChordStep.Swallow && chord.TriggerUp() == ChordStep.Swallow && chord.IsIdle, "wheel cancels and swallows until release");
+chord.TriggerDown(0, 10, 10, false); chord.LeftDown();
+Check(chord.Tick(10001) == ChordStep.Cancel && !chord.IsChording && chord.LeftUp() == ChordStep.Swallow && chord.IsIdle, "stuck chord times out");
+Check(chord.LeftDown() == ChordStep.Pass && chord.LeftUp() == ChordStep.Pass && chord.TriggerUp() == ChordStep.Pass, "idle chord passes everything");
+
+result = null;
+engine.GapSuspended = true;
+engine.Down(20000); engine.Up(20100); engine.Tick(22000);
+engine.Down(22100); engine.Up(22200); engine.Tick(25000);
+Check(result is null && engine.Sequence == "..", "suspended gap waits for commit");
+engine.GapSuspended = false; engine.Commit();
+Check(result is { Pattern: ".." }, "commit completes immediately");
+result = null; engine.Commit();
+Check(result is null, "empty commit is a no-op");
+Console.WriteLine("Chord activation tests passed.");
+
 var v07 = new AppSettings
 {
     StartupEnabled = true,

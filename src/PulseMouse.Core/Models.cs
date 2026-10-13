@@ -1,6 +1,6 @@
 namespace PulseMouse.Core;
 public enum PulseKind { Dot, Dash }
-public enum MouseInputMode { Auto = 0, X1 = 1, X2 = 2, Middle = 3 }
+public enum MouseInputMode { Auto = 0, X1 = 1, X2 = 2, Middle = 3, Chord = 4 }
 public enum ActionKind { Application, Folder, Url, Workflow }
 public sealed class CommandBinding
 {

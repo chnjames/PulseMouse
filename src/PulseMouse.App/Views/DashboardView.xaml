@@ -125,6 +125,15 @@
                                 <TextBlock Style="{StaticResource RadioDesc}" Text="静止长按中键激活，7 秒内用左键输入"/>
                             </StackPanel>
                         </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource RadioTitle}" Text="右键 + 左键 · 和弦"/>
+                                    <c:KindChip Kind="Muted" Text="试验" Height="18" Margin="6,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="按住右键用左键敲节奏，松开右键立即执行；右键单击、拖拽照常"/>
+                            </StackPanel>
+                        </ListBoxItem>
                     </ListBox>
                     <StackPanel Margin="0,6,0,0" TextElement.FontSize="12">
                         <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,8">
