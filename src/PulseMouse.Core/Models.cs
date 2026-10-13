@@ -16,6 +16,11 @@ public sealed class AppSettings
     public bool Enabled { get; set; } = true;
     public int MouseButton { get; set; } = 2; // compatibility with previous settings
     public MouseInputMode InputMode { get; set; } = MouseInputMode.Auto;
+    /// <summary>Side button Auto mode detected on this machine (0: none, use the right+left chord).</summary>
+    public int DetectedSideButton { get; set; }
+    public bool PauseInFullscreen { get; set; } = true;
+    /// <summary>Process names (without .exe) where PulseMouse never intercepts the mouse.</summary>
+    public List<string> ExcludedApps { get; set; } = new();
     public int MiddleHoldMs { get; set; } = 550;
     public int ShortMaxMs { get; set; } = 300;
     public int LongMinMs { get; set; } = 500;

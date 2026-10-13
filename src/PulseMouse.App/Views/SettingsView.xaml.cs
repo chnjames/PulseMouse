@@ -60,6 +60,13 @@ public partial class SettingsView : System.Windows.Controls.UserControl, IPageVi
         CapsuleSwitch.IsChecked = s.FloatingFeedback;
         BreathingSwitch.IsChecked = s.CapsuleBreathing;
         ConfirmSwitch.IsChecked = s.ConfirmWorkflows;
+        FullscreenSwitch.IsChecked = s.PauseInFullscreen;
+        ExcludedBox.Text = string.Join(", ", s.ExcludedApps);
+        int side = _c.DetectedSideButton;
+        SideText.Text = side == 0
+            ? "尚未检测到侧键：自动模式使用右键 + 左键和弦；按一下侧键即改用侧键"
+            : $"已检测到 X{side}：自动模式直接用侧键敲节奏；换成没有侧键的鼠标后请重新检测";
+        RedetectButton.IsEnabled = side != 0;
         (s.CapsulePosition switch { "Left" => PosLeft, "Right" => PosRight, _ => PosCenter }).IsChecked = true;
         AiUrlBox.Text = s.AiProviderUrl;
         for (int i = 0; i < Timings.Length; i++) _sliders[i].Value = Timings[i].Get(s);
@@ -173,10 +180,27 @@ public partial class SettingsView : System.Windows.Controls.UserControl, IPageVi
         s.FloatingFeedback = CapsuleSwitch.IsChecked == true;
         s.CapsuleBreathing = BreathingSwitch.IsChecked == true;
         s.ConfirmWorkflows = ConfirmSwitch.IsChecked == true;
+        s.PauseInFullscreen = FullscreenSwitch.IsChecked == true;
         if (!s.FloatingFeedback) _c.Feedback.HideNow();
         _c.ApplySettings();
         _c.Save();
         _shell.Toast("设置已自动保存");
+    }
+
+    private void ExcludedLostFocus(object sender, KeyboardFocusChangedEventArgs e)
+    {
+        var names = ExcludedBox.Text.Split([',', '，', ';', '；', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        var before = string.Join(",", _c.Settings.ExcludedApps);
+        _c.SetExcludedApps(names);
+        ExcludedBox.Text = string.Join(", ", _c.Settings.ExcludedApps);
+        if (before != string.Join(",", _c.Settings.ExcludedApps)) _shell.Toast("排除列表已保存");
+    }
+
+    private void RedetectClick(object sender, RoutedEventArgs e)
+    {
+        _c.ResetSideDetection();
+        Reload();
+        _shell.Toast("已清除侧键检测结果");
     }
 
     private void LanguageChanged(object sender, SelectionChangedEventArgs e)

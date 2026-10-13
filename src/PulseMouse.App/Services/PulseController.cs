@@ -83,6 +83,8 @@ public sealed class PulseController : IDisposable
             _dispatcher.BeginInvoke(DispatcherPriority.Input, () => OnButton(down, ticks * 1000 / Stopwatch.Frequency));
         _hook.ChordEvent += (step, _) => _dispatcher.BeginInvoke(DispatcherPriority.Input, () => OnChord(step));
         _hook.RawButtonEvent += ev => _dispatcher.BeginInvoke(DispatcherPriority.Background, () => OnRawButton(ev));
+        _hook.SideDetected += button => _dispatcher.BeginInvoke(() => { Settings.DetectedSideButton = button; SaveSoon(); });
+        _hook.AutoSide = Settings.DetectedSideButton;
 
         _timer = new DispatcherTimer(TimeSpan.FromMilliseconds(40), DispatcherPriority.Background, (_, _) => OnTick(), _dispatcher);
         _saveTimer = new DispatcherTimer(TimeSpan.FromMilliseconds(350), DispatcherPriority.Background, (_, _) => { _saveTimer!.Stop(); Save(); }, _dispatcher);
@@ -106,6 +108,8 @@ public sealed class PulseController : IDisposable
         _hook.MiddleHoldMs = Settings.MiddleHoldMs;
         _hook.GesturesEnabled = Settings.GesturesEnabled;
         _hook.GestureMinDistancePx = Settings.GestureMinDistancePx;
+        _hook.PauseInFullscreen = Settings.PauseInFullscreen;
+        _hook.SetExcludedApps(Settings.ExcludedApps ??= new());
         Feedback.Configure(Settings.CapsulePosition, Settings.CapsuleBreathing);
     }
 
@@ -164,6 +168,7 @@ public sealed class PulseController : IDisposable
         Settings = imported;
         NormalizeStatistics();
         ApplySettings();
+        _hook.AutoSide = Settings.DetectedSideButton;
         SetStartup(Settings.StartupEnabled);
         Save();
         AddLog("已导入配置并立即生效", "", LogTone.Hit);
@@ -231,6 +236,29 @@ public sealed class PulseController : IDisposable
     };
 
     public bool IsChordMode => _hook.ChordActive;
+
+    public int DetectedSideButton => _hook.AutoSide;
+
+    public void ResetSideDetection()
+    {
+        _hook.AutoSide = 0;
+        Settings.DetectedSideButton = 0;
+        _hook.ResetInput();
+        ResetEngine();
+        ResetLive();
+        AddLog("已清除侧键检测结果；自动模式改用右键 + 左键和弦，按一下侧键可重新检测", "", LogTone.None);
+        Save();
+        StateChanged?.Invoke();
+        LiveChanged?.Invoke();
+    }
+
+    public void SetExcludedApps(IEnumerable<string> names)
+    {
+        Settings.ExcludedApps = names.Select(MouseHook.NormalizeAppName).Where(n => n.Length > 0)
+            .Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        ApplySettings();
+        SaveSoon();
+    }
 
     /// <summary>Which button currently types rhythms (used for log lines of simulated input).</summary>
     private bool UsesMiddle => Settings.InputMode == MouseInputMode.Middle;
@@ -402,7 +430,6 @@ public sealed class PulseController : IDisposable
     private void OnTick()
     {
         long now = NowMs;
-        _hook.CheckTimeout(Stopwatch.GetTimestamp());
         _engine.Tick(now);
         if (Phase is LivePhase.Matched or LivePhase.Miss or LivePhase.Reset && now - _phaseChangedMs > IdleAfterMs)
         {

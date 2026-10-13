@@ -7,10 +7,14 @@ namespace PulseMouse.Windows;
 
 public readonly record struct MouseButtonEvent(string Button, bool IsDown, long Timestamp, bool Consumed, string Note);
 
-/// <summary>Installs on WPF UI thread; callbacks enqueue work and avoid blocking the hook.</summary>
+/// <summary>
+/// Runs the low-level hook on its own thread so a busy UI never delays system input (Windows silently drops
+/// hooks that keep timing out). Events are raised on that thread; subscribers must only enqueue work.
+/// </summary>
 public sealed class MouseHook : IDisposable
 {
     private const int WhMouseLl = 14;
+    private const uint WmTimer = 0x0113, WmQuit = 0x0012;
     private const int WmLDown = 0x0201, WmLUp = 0x0202, WmMove = 0x0200;
     private const int WmMDown = 0x0207, WmMUp = 0x0208;
     private const int WmXDown = 0x020B, WmXUp = 0x020C;
@@ -19,7 +23,12 @@ public sealed class MouseHook : IDisposable
     private const uint MouseEventRightDown = 0x0008, MouseEventRightUp = 0x0010;
     private static readonly nuint InjectionMarker = 0x50554C53;
     private readonly HookProc _callback;
-    private nint _handle;
+    private readonly object _gate = new();
+    private readonly TargetInspector _inspector = new();
+    private Thread? _thread;
+    private uint _threadId;
+    private volatile nint _handle;
+    private bool _sideBypassed, _middleBypassed;
     private readonly MiddleActivation _middle = new();
     private readonly ChordActivation _chord = new();
     private bool _leftIsDown;
@@ -31,6 +40,12 @@ public sealed class MouseHook : IDisposable
     public int GestureMinDistancePx { get; set; } = 75;
     public event Action<string>? GestureEvent;
     private int _autoSide; // 0: unobserved, 1: X1, 2: X2
+    /// <summary>Side button Auto mode settled on (0: none yet); persisted so detection survives restarts.</summary>
+    public int AutoSide { get => _autoSide; set { lock (_gate) _autoSide = value is 1 or 2 ? value : 0; } }
+    public event Action<int>? SideDetected;
+    public bool PauseInFullscreen { get => _inspector.PauseInFullscreen; set => _inspector.PauseInFullscreen = value; }
+    public void SetExcludedApps(IEnumerable<string> names) { lock (_gate) _inspector.SetExcluded(names); }
+    public static string NormalizeAppName(string name) => TargetInspector.Normalize(name);
     public bool Enabled { get; set; } = true;
     public MouseInputMode Mode { get; set; } = MouseInputMode.Auto;
     public int MiddleHoldMs { get => _middle.MinimumHoldMs; set => _middle.MinimumHoldMs = Math.Clamp(value, 300, 2000); }
@@ -53,24 +68,53 @@ public sealed class MouseHook : IDisposable
 
     public void Install()
     {
-        if (_handle != 0) return;
-        _handle = SetWindowsHookEx(WhMouseLl, _callback, GetModuleHandle(null), 0);
-        if (_handle == 0) throw new Win32Exception(Marshal.GetLastWin32Error(), "安装 WH_MOUSE_LL 失败");
+        if (_thread is not null) return;
+        int error = 0;
+        using var ready = new ManualResetEventSlim();
+        var thread = new Thread(() =>
+        {
+            _threadId = GetCurrentThreadId();
+            _handle = SetWindowsHookEx(WhMouseLl, _callback, GetModuleHandle(null), 0);
+            if (_handle == 0) error = Marshal.GetLastWin32Error();
+            ready.Set();
+            if (_handle == 0) return;
+            // Enforces hold/arm timeouts even while the mouse is idle.
+            nuint timer = SetTimer(0, 0, 40, 0);
+            while (GetMessage(out var msg, 0, 0, 0) > 0)
+            {
+                if (msg.Message == WmTimer) lock (_gate) CheckTimeout(Stopwatch.GetTimestamp());
+            }
+            KillTimer(0, timer);
+            UnhookWindowsHookEx(_handle);
+            _handle = 0;
+        })
+        { IsBackground = true, Priority = ThreadPriority.Highest, Name = "PulseMouse hook" };
+        thread.Start();
+        ready.Wait();
+        if (_handle == 0)
+        {
+            thread.Join();
+            throw new Win32Exception(error, "安装 WH_MOUSE_LL 失败");
+        }
+        _thread = thread;
     }
 
     public void ResetInput()
     {
-        _chord.Reset();
-        _middle.Disarm();
-        _gesture.Cancel(); _gestureReady = false;
-        _leftIsDown = false;
-        _autoSide = 0;
+        lock (_gate)
+        {
+            _chord.Reset();
+            _middle.Disarm();
+            _gesture.Cancel(); _gestureReady = false;
+            _leftIsDown = false;
+        }
     }
 
     private nint HookCallback(int nCode, nint wParam, nint lParam)
     {
         if (nCode < 0) return CallNextHookEx(_handle, nCode, wParam, lParam);
         long ticks = Stopwatch.GetTimestamp();
+        lock (_gate)
         try
         {
             var info = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
@@ -102,6 +146,7 @@ public sealed class MouseHook : IDisposable
                     {
                         _autoSide = button;
                         _middle.Disarm();
+                        SideDetected?.Invoke(button);
                         StateChanged?.Invoke($"已检测到侧键 X{button}，自动启用侧键模式");
                     }
                     bool selected = Mode switch
@@ -111,8 +156,14 @@ public sealed class MouseHook : IDisposable
                         MouseInputMode.X2 => button == 2,
                         _ => false
                     };
-                    bool consume = Enabled && selected;
-                    RawButtonEvent?.Invoke(new($"X{button}", down, ticks, consume, consume ? "节奏输入" : "透传"));
+                    string? bypass = null;
+                    if (Enabled && selected && down)
+                    {
+                        bypass = _inspector.Bypass(info.X, info.Y, replays: false);
+                        _sideBypassed = bypass is not null;
+                    }
+                    bool consume = Enabled && selected && !_sideBypassed;
+                    RawButtonEvent?.Invoke(new($"X{button}", down, ticks, consume, consume ? "节奏输入" : bypass is null ? "透传" : "透传：" + bypass));
                     if (consume)
                     {
                         ButtonEvent?.Invoke(down, ticks);
@@ -123,8 +174,14 @@ public sealed class MouseHook : IDisposable
             else if (wParam == WmMDown || wParam == WmMUp)
             {
                 bool down = wParam == WmMDown;
-                bool eligible = Enabled && Mode == MouseInputMode.Middle;
-                bool gestureEligible = eligible || (Enabled && ChordActive);
+                string? bypass = null;
+                if (down)
+                {
+                    bypass = Enabled && (Mode == MouseInputMode.Middle || ChordActive) ? _inspector.Bypass(info.X, info.Y, replays: false) : null;
+                    _middleBypassed = bypass is not null;
+                }
+                bool eligible = Enabled && Mode == MouseInputMode.Middle && !_middleBypassed;
+                bool gestureEligible = eligible || (Enabled && ChordActive && !_middleBypassed);
                 long ms = ToMs(ticks);
                 if (down)
                 {
@@ -148,7 +205,7 @@ public sealed class MouseHook : IDisposable
                     else if (!eligible) _middle.Disarm();
                     RawButtonEvent?.Invoke(new("中键", false, ticks, false, activated && eligible ? "激活成功，原始事件透传" : "未激活，原始事件透传"));
                 }
-                if (down) RawButtonEvent?.Invoke(new("中键", true, ticks, false, "原始事件透传"));
+                if (down) RawButtonEvent?.Invoke(new("中键", true, ticks, false, bypass is null ? "原始事件透传" : "透传，不识别手势：" + bypass));
             }
             else if (wParam == WmLDown || wParam == WmLUp)
             {
@@ -173,8 +230,7 @@ public sealed class MouseHook : IDisposable
     }
 
     private static long ToMs(long ticks) => ticks * 1000 / Stopwatch.Frequency;
-    /// <summary>Called by a UI timer so arm expiry is enforced even when the mouse is idle.</summary>
-    public void CheckTimeout(long ticks)
+    private void CheckTimeout(long ticks)
     {
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
         switch (_chord.Tick(ToMs(ticks)))
@@ -197,6 +253,11 @@ public sealed class MouseHook : IDisposable
     {
         bool chordMode = Enabled && ChordActive;
         if (!chordMode && _chord.IsIdle) return false;
+        if (message == WmRDown && _chord.IsIdle && _inspector.Bypass(info.X, info.Y, replays: true) is { } bypass)
+        {
+            RawButtonEvent?.Invoke(new("右键", true, ticks, false, "透传：" + bypass));
+            return false;
+        }
         var step = message switch
         {
             WmRDown => chordMode ? _chord.TriggerDown(ToMs(ticks), info.X, info.Y, _physicalLeftDown) : ChordStep.Pass,
@@ -302,22 +363,32 @@ public sealed class MouseHook : IDisposable
 
     public void CancelInput()
     {
-        _chord.Cancel();
-        _gesture.Cancel(); _gestureReady = false;
-        _middle.Disarm(); _leftIsDown = false;
+        lock (_gate)
+        {
+            _chord.Cancel();
+            _gesture.Cancel(); _gestureReady = false;
+            _middle.Disarm(); _leftIsDown = false;
+        }
         StateChanged?.Invoke("已取消本次输入");
     }
     public void FinishSequence()
     {
-        if (_middle.Armed && !_leftIsDown)
+        bool finished;
+        lock (_gate)
         {
-            _middle.Disarm();
-            StateChanged?.Invoke("本次中键节奏输入已结束");
+            finished = _middle.Armed && !_leftIsDown;
+            if (finished) _middle.Disarm();
         }
+        if (finished) StateChanged?.Invoke("本次中键节奏输入已结束");
     }
     public void Dispose()
     {
-        if (_handle != 0) { UnhookWindowsHookEx(_handle); _handle = 0; }
+        if (_thread is { } thread)
+        {
+            PostThreadMessage(_threadId, WmQuit, 0, 0);
+            thread.Join(2000);
+            _thread = null;
+        }
         GC.SuppressFinalize(this);
     }
     private delegate nint HookProc(int nCode, nint wParam, nint lParam);
@@ -336,4 +407,10 @@ public sealed class MouseHook : IDisposable
     [DllImport("user32.dll")] private static extern nint CallNextHookEx(nint hook, int nCode, nint wParam, nint lParam);
     [DllImport("user32.dll", SetLastError = true)] [return: MarshalAs(UnmanagedType.Bool)] private static extern bool UnhookWindowsHookEx(nint hook);
     [DllImport("kernel32.dll", CharSet = CharSet.Unicode)] private static extern nint GetModuleHandle(string? name);
+    [DllImport("kernel32.dll")] private static extern uint GetCurrentThreadId();
+    [StructLayout(LayoutKind.Sequential)] private struct Msg { public nint Window; public uint Message; public nint WParam, LParam; public uint Time; public Point Point; }
+    [DllImport("user32.dll")] private static extern int GetMessage(out Msg msg, nint window, uint min, uint max);
+    [DllImport("user32.dll")] private static extern bool PostThreadMessage(uint threadId, uint message, nint wParam, nint lParam);
+    [DllImport("user32.dll")] private static extern nuint SetTimer(nint window, nuint id, uint elapseMs, nint callback);
+    [DllImport("user32.dll")] private static extern bool KillTimer(nint window, nuint id);
 }
