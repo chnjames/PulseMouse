@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/PulseMouse.App/PulseMouse.App.csproj" />
+    <Project Path="src/PulseMouse.Core/PulseMouse.Core.csproj" />
+    <Project Path="src/PulseMouse.Windows/PulseMouse.Windows.csproj" />
+    <Project Path="src/PulseMouse.Actions/PulseMouse.Actions.csproj" />
+    <Project Path="src/PulseMouse.Infrastructure/PulseMouse.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/PulseMouse.Core.SmokeTests/PulseMouse.Core.SmokeTests.csproj" />
+  </Folder>
+</Solution>

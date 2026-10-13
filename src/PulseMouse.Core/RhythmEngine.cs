@@ -1,0 +1,53 @@
+namespace PulseMouse.Core;
+/// <summary>Deterministic timestamp-based recognizer. Call Tick after a pause; ticks are monotonic milliseconds.</summary>
+public sealed class RhythmEngine
+{
+    private readonly Func<AppSettings> _settings;
+    private long? _pressedAt;
+    private long? _lastRelease;
+    private string _sequence = "";
+    public string Sequence => _sequence;
+    public event Action<string>? SequenceChanged;
+    public event Action<Recognition>? Completed;
+    public RhythmEngine(Func<AppSettings> settings) => _settings = settings;
+    public void Down(long now)
+    {
+        if (_pressedAt is not null) return;
+        Tick(now);
+        _pressedAt = now;
+    }
+    public void Up(long now)
+    {
+        if (_pressedAt is not long down) return;
+        _pressedAt = null;
+        var duration = now - down;
+        var s = _settings();
+        if (duration < 35 || duration > s.LongMaxMs) { Reset(); return; }
+        char? pulse = duration <= s.ShortMaxMs ? '.' : duration >= s.LongMinMs ? '-' : null;
+        if (pulse is null) { Reset(); return; }
+        _sequence += pulse.Value;
+        _lastRelease = now;
+        SequenceChanged?.Invoke(_sequence);
+        if (_sequence.Length >= s.MaxPulses) Finish();
+    }
+    public void Tick(long now)
+    {
+        if (_pressedAt is not null || _lastRelease is not long end) return;
+        if (now - end >= _settings().SequenceGapMs) Finish();
+    }
+    public void Reset()
+    {
+        _pressedAt = null;
+        _lastRelease = null;
+        _sequence = "";
+        SequenceChanged?.Invoke("");
+    }
+    private void Finish()
+    {
+        var pattern = _sequence;
+        Reset();
+        if (pattern.Length == 0) return;
+        var match = _settings().Commands.FirstOrDefault(c => c.Pattern == pattern);
+        Completed?.Invoke(new Recognition(pattern, match));
+    }
+}
