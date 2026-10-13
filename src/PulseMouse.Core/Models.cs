@@ -1,7 +1,7 @@
 namespace PulseMouse.Core;
 public enum PulseKind { Dot, Dash }
 public enum MouseInputMode { Auto = 0, X1 = 1, X2 = 2, Middle = 3, Chord = 4 }
-public enum ActionKind { Application, Folder, Url, Workflow }
+public enum ActionKind { Application, Folder, Url, Workflow, Shortcut }
 public sealed class CommandBinding
 {
     public string Name { get; set; } = "";
@@ -41,6 +41,10 @@ public sealed class AppSettings
     public string StatisticsDate { get; set; } = "";
     public int ExecutionsToday { get; set; }
     public int MissesToday { get; set; }
+    /// <summary>Runs per command name today; moved into <see cref="History"/> at day rollover.</summary>
+    public Dictionary<string, int> CommandsToday { get; set; } = new();
+    /// <summary>One entry per past day PulseMouse was used (most recent last, capped at 90).</summary>
+    public List<DailyStat> History { get; set; } = new();
     public string StatisticsWeekStart { get; set; } = "";
     public double ActiveSecondsThisWeek { get; set; }
     public string AiProviderUrl { get; set; } = "https://chatgpt.com/";
@@ -57,6 +61,14 @@ public sealed class AppSettings
     };
 }
 public readonly record struct Recognition(string Pattern, CommandBinding? Command);
+
+public sealed class DailyStat
+{
+    public string Date { get; set; } = "";
+    public int Executions { get; set; }
+    public int Misses { get; set; }
+    public Dictionary<string, int> Commands { get; set; } = new();
+}
 
 public sealed class GestureBinding
 {

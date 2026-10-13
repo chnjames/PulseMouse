@@ -25,7 +25,7 @@ public static class Loc
     public static string Description(Page page) => page switch
     {
         Page.Dashboard => T("实时观察节奏输入、监听状态与最近执行。", "Monitor rhythm input, listening status and recent runs."),
-        Page.Commands => T("把节奏绑定到程序、文件夹、网页与工作流。", "Bind rhythms to apps, folders, websites and workflows."),
+        Page.Commands => T("把节奏绑定到快捷键、程序、文件夹、网页与工作流。", "Bind rhythms to shortcuts, apps, folders, websites and workflows."),
         Page.Gestures => T("按住中键向四个方向移动，松开后执行。", "Hold the middle button, move, release to run."),
         Page.Workflows => T("把多个本地动作串成一条节奏指令，执行前确认。", "Chain local actions into one rhythm, confirmed before running."),
         _ => T("行为、节奏识别、Pulse Capsule、数据与备份。", "Behavior, timing, Pulse Capsule, data and backup.")
@@ -36,6 +36,7 @@ public static class Loc
         ActionKind.Folder => T("文件夹", "Folder"),
         ActionKind.Url => T("网址", "URL"),
         ActionKind.Workflow => T("工作流", "Workflow"),
+        ActionKind.Shortcut => T("快捷键", "Shortcut"),
         _ => T("应用", "App")
     };
 

@@ -2,6 +2,10 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using PulseMouse.App.Controls;
+using Key = System.Windows.Input.Key;
+using Keyboard = System.Windows.Input.Keyboard;
+using KeyInterop = System.Windows.Input.KeyInterop;
+using ModifierKeys = System.Windows.Input.ModifierKeys;
 using PulseMouse.App.Services;
 using PulseMouse.Core;
 
@@ -23,6 +27,12 @@ public partial class CommandsView : System.Windows.Controls.UserControl, IPageVi
         Composer.PatternChanged += _ => PatternLength.Text = $"{Composer.Pattern.Length} / 5";
         Composer.LimitReached += () => _shell.Toast("节奏最多 5 位", IconKind.Alert);
         _c.BindingsChanged += () => { if (IsLoaded) RebuildList(); };
+        foreach (var (name, keys) in TargetField.ShortcutPresets)
+        {
+            var preset = new Button { Style = (Style)FindResource("BtnSmGhost"), Content = name, ToolTip = keys, Margin = new Thickness(0, 0, 6, 6) };
+            preset.Click += (_, _) => ApplyPreset(name, keys);
+            ShortcutPresets.Children.Add(preset);
+        }
         Relocalize();
     }
 
@@ -152,7 +162,37 @@ public partial class CommandsView : System.Windows.Controls.UserControl, IPageVi
 
     private void KindChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (IsLoaded && !_syncing) RefreshInspector();
+        if (!IsLoaded || _syncing) return;
+        // A key combination is meaningless as a path and vice versa.
+        bool isShortcut = DraftKind == ActionKind.Shortcut;
+        if (isShortcut != KeyChord.TryParse(TargetBox.Text, out _)) TargetBox.Text = "";
+        RefreshInspector();
+    }
+
+    private void TargetKeyDown(object sender, System.Windows.Input.KeyEventArgs e)
+    {
+        if (DraftKind != ActionKind.Shortcut) return;
+        var key = e.Key switch { Key.System => e.SystemKey, Key.ImeProcessed => e.ImeProcessedKey, _ => e.Key };
+        var modifiers = Keyboard.Modifiers;
+        if (key == Key.Tab && modifiers == ModifierKeys.None) return;
+        e.Handled = true;
+        if (key == Key.Back && modifiers == ModifierKeys.None) { TargetBox.Text = ""; return; }
+        ushort vk = (ushort)KeyInterop.VirtualKeyFromKey(key);
+        if (KeyChord.IsModifier(vk)) return;
+        if (!KeyChord.IsNamedKey(vk)) { _shell.Toast("暂不支持这个按键", IconKind.Alert); return; }
+        var held = new List<ushort>();
+        if (modifiers.HasFlag(ModifierKeys.Control)) held.Add(KeyChord.Ctrl);
+        if (modifiers.HasFlag(ModifierKeys.Shift)) held.Add(KeyChord.Shift);
+        if (modifiers.HasFlag(ModifierKeys.Alt)) held.Add(KeyChord.Alt);
+        if (modifiers.HasFlag(ModifierKeys.Windows)) held.Add(KeyChord.Win);
+        TargetBox.Text = KeyChord.Format(held, vk);
+        TargetBox.CaretIndex = TargetBox.Text.Length;
+    }
+
+    private void ApplyPreset(string name, string keys)
+    {
+        TargetBox.Text = keys;
+        if (NameBox.Text.Trim().Length == 0 || TargetField.ShortcutPresets.Any(p => p.Name == NameBox.Text.Trim())) NameBox.Text = name;
     }
 
     private void RefreshInspector()
@@ -180,6 +220,7 @@ public partial class CommandsView : System.Windows.Controls.UserControl, IPageVi
             TargetHint.Text = hint;
             BrowseButton.Visibility = browse ? Visibility.Visible : Visibility.Collapsed;
         }
+        ShortcutPresets.Visibility = kind == ActionKind.Shortcut ? Visibility.Visible : Visibility.Collapsed;
     }
 
     private void BrowseClick(object sender, RoutedEventArgs e)
@@ -199,6 +240,7 @@ public partial class CommandsView : System.Windows.Controls.UserControl, IPageVi
         if (pattern.Length == 0) { _shell.Toast("请添加 1–5 位节奏", IconKind.Alert); return; }
         if (_c.ConflictName(pattern, _editing) is not null) { _shell.Toast("该节奏已经被占用", IconKind.Alert); return; }
         if (kind != ActionKind.Workflow && PulseController.ValidateTarget(kind, target) is { } error) { _shell.Toast(error, IconKind.Alert); return; }
+        if (kind == ActionKind.Shortcut && KeyChord.TryParse(target, out var chord)) target = chord.ToString();
 
         if (_editing is null)
         {
@@ -231,6 +273,11 @@ public partial class CommandsView : System.Windows.Controls.UserControl, IPageVi
 
     private void TestClick(object sender, RoutedEventArgs e)
     {
+        if (_editing is { ActionKind: ActionKind.Shortcut })
+        {
+            _shell.Toast("快捷键会发送到前台窗口，在这里测试只会发给 PulseMouse；请切到目标程序后用节奏触发", IconKind.Info);
+            return;
+        }
         if (_editing is { } command) _ = _c.Execute(command, command.Pattern);
     }
 

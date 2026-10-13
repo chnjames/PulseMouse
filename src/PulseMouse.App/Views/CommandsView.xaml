@@ -22,6 +22,7 @@
                         <ListBoxItem Content="文件夹"/>
                         <ListBoxItem Content="网址"/>
                         <ListBoxItem Content="工作流"/>
+                        <ListBoxItem Content="快捷键"/>
                     </ListBox>
                     <Grid>
                         <TextBox x:Name="SearchBox" Style="{StaticResource Input}" Padding="32,0,10,0" c:Ui.Placeholder="搜索名称、目标或节奏" TextChanged="SearchChanged"/>
@@ -72,19 +73,21 @@
                         <StackPanel Margin="0,0,0,15">
                             <TextBlock Style="{StaticResource FieldLabel}" Text="动作类型"/>
                             <ListBox x:Name="KindSeg" Style="{StaticResource SegFull}" SelectionChanged="KindChanged">
-                                <ListBoxItem c:Ui.Icon="App" Content="应用"/>
-                                <ListBoxItem c:Ui.Icon="Folder" Content="文件夹"/>
-                                <ListBoxItem c:Ui.Icon="Url" Content="网址"/>
-                                <ListBoxItem c:Ui.Icon="Workflow" Content="工作流"/>
+                                <ListBoxItem Content="应用"/>
+                                <ListBoxItem Content="文件夹"/>
+                                <ListBoxItem Content="网址"/>
+                                <ListBoxItem Content="工作流"/>
+                                <ListBoxItem Content="快捷键"/>
                             </ListBox>
                         </StackPanel>
                         <StackPanel x:Name="TargetPanel" Margin="0,0,0,15">
                             <TextBlock x:Name="TargetLabel" Style="{StaticResource FieldLabel}"/>
                             <DockPanel>
                                 <Button x:Name="BrowseButton" DockPanel.Dock="Right" Style="{StaticResource Btn}" Content="浏览…" Margin="8,0,0,0" Click="BrowseClick"/>
-                                <TextBox x:Name="TargetBox" Style="{StaticResource InputMono}"/>
+                                <TextBox x:Name="TargetBox" Style="{StaticResource InputMono}" PreviewKeyDown="TargetKeyDown"/>
                             </DockPanel>
                             <TextBlock x:Name="TargetHint" Style="{StaticResource Hint}"/>
+                            <WrapPanel x:Name="ShortcutPresets" Margin="0,8,0,0" Visibility="Collapsed"/>
                         </StackPanel>
                         <Border x:Name="WorkflowNote" Style="{StaticResource Note}" Margin="0,0,0,15" Visibility="Collapsed">
                             <DockPanel>

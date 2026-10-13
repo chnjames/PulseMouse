@@ -34,6 +34,11 @@ public sealed class MouseHook : IDisposable
     private bool _leftIsDown;
     private bool _physicalLeftDown;
     private long _lastReplayMs = long.MinValue / 2;
+    /// <summary>When our last injected event was sent and has not come back through the hook yet.</summary>
+    private long? _awaitingEchoMs;
+    private bool _injectionBlocked;
+    /// <summary>Something (a remote-control tool's input lock, a sandbox) discards simulated input; replays and shortcuts cannot work.</summary>
+    public bool InjectionBlocked => _injectionBlocked;
     private readonly GestureRecognizer _gesture = new();
     private bool _gestureReady;
     public bool GesturesEnabled { get; set; } = true;
@@ -83,6 +88,7 @@ public sealed class MouseHook : IDisposable
             if (_handle == 0) return;
             // Enforces hold/arm timeouts even while the mouse is idle.
             nuint timer = SetTimer(0, 0, 40, 0);
+            lock (_gate) Probe();
             while (GetMessage(out var msg, 0, 0, 0) > 0)
             {
                 if (msg.Message == WmTimer) lock (_gate) CheckTimeout(Stopwatch.GetTimestamp());
@@ -121,7 +127,16 @@ public sealed class MouseHook : IDisposable
         try
         {
             var info = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
-            if (info.ExtraInfo == InjectionMarker) return CallNextHookEx(_handle, nCode, wParam, lParam);
+            if (info.ExtraInfo == InjectionMarker)
+            {
+                _awaitingEchoMs = null;
+                if (_injectionBlocked)
+                {
+                    _injectionBlocked = false;
+                    StateChanged?.Invoke("模拟输入已恢复，右键和弦重新启用");
+                }
+                return CallNextHookEx(_handle, nCode, wParam, lParam);
+            }
             bool injected = (info.Flags & LlmhfInjected) != 0;
             // Remote-control tools (ToDesk tags 0x77, RDP…) deliver the user's real clicks as injected input. A tagged
             // right press right after our own replay is another hook re-sending it; swallowing that again would loop.
@@ -235,6 +250,15 @@ public sealed class MouseHook : IDisposable
     private static long ToMs(long ticks) => ticks * 1000 / Stopwatch.Frequency;
     private void CheckTimeout(long ticks)
     {
+        if (_awaitingEchoMs is long sent && ToMs(ticks) - sent > 300)
+        {
+            _awaitingEchoMs = null;
+            if (!_injectionBlocked)
+            {
+                _injectionBlocked = true;
+                StateChanged?.Invoke("模拟输入被系统拦截（例如远程控制工具开启了屏蔽键鼠），右键和弦已暂停，右键恢复原生；快捷键动作也无法发送");
+            }
+        }
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
         switch (_chord.Tick(ToMs(ticks)))
         {
@@ -260,6 +284,13 @@ public sealed class MouseHook : IDisposable
         if (message == WmRDown && _chord.IsIdle && _inspector.Bypass(info.X, info.Y, replays: true) is { } bypass)
         {
             RawButtonEvent?.Invoke(new("右键", true, ticks, false, "透传：" + bypass));
+            return false;
+        }
+        if (message == WmRDown && _chord.IsIdle && _injectionBlocked)
+        {
+            // Holding the press back would lose it; let it through and check whether injection works again.
+            Probe();
+            RawButtonEvent?.Invoke(new("右键", true, ticks, false, "透传：模拟输入被拦截，无法补发右键"));
             return false;
         }
         var step = message switch
@@ -320,9 +351,13 @@ public sealed class MouseHook : IDisposable
         }
     }
 
+    /// <summary>A zero-distance move tagged as ours; only used on demand so it never keeps the PC from idling.</summary>
+    private void Probe() => Inject(0x0001);
+
     private void Inject(params uint[] flags)
     {
         _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
+        _awaitingEchoMs ??= _lastReplayMs;
         var inputs = new Input[flags.Length];
         for (int i = 0; i < flags.Length; i++)
             inputs[i] = new Input { Type = 0, Mouse = new MouseInput { Flags = flags[i], ExtraInfo = InjectionMarker } };
@@ -334,6 +369,7 @@ public sealed class MouseHook : IDisposable
     {
         // Hook coordinates are physical pixels; measure the desktop the same way regardless of process DPI awareness.
         _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
+        _awaitingEchoMs ??= _lastReplayMs;
         nint previous = SetThreadDpiAwarenessContext(-4);
         try
         {

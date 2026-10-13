@@ -25,6 +25,10 @@ public static class ActionRunner
         }
         switch (binding.ActionKind)
         {
+            case ActionKind.Shortcut:
+                if (!KeyChord.TryParse(target, out var chord)) throw new ArgumentException("无法识别的快捷键：" + target);
+                KeySender.Send(chord);
+                return;
             case ActionKind.Url:
                 if (!Uri.TryCreate(target, UriKind.Absolute, out var uri) ||
                     (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps))

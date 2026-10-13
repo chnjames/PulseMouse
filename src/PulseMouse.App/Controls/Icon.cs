@@ -8,7 +8,7 @@ public enum IconKind
 {
     None, Dashboard, Commands, Gestures, Workflows, Settings, Search, Plus, Play, Trash,
     App, Folder, Url, Workflow, Copy, Check, X, Up, Down, Left, Right, ChevronUp, ChevronDown,
-    Mouse, Refresh, Back, Shield, Info, Download, Upload, External, Dot, Alert
+    Mouse, Refresh, Back, Shield, Info, Download, Upload, External, Dot, Alert, Keyboard
 }
 
 /// <summary>Stroke icons drawn on a 24-unit grid, matching the 1.7 stroke weight of the design spec.</summary>
@@ -76,6 +76,7 @@ public sealed class Icon : FrameworkElement
         [IconKind.External] = [P("M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5")],
         [IconKind.Dot] = [(Freeze(new EllipseGeometry(new System.Windows.Point(12, 12), 4, 4)), true)],
         [IconKind.Alert] = [P("M12 4l9 16H3z"), P("M12 10v4M12 17h.01")],
+        [IconKind.Keyboard] = [R(3, 6, 18, 12, 2.5), P("M7 10h.01M10.3 10h.01M13.7 10h.01M17 10h.01M8 14.5h8")],
     };
 
     private static (Geometry, bool) P(string data) => (Freeze(Geometry.Parse(data)), false);

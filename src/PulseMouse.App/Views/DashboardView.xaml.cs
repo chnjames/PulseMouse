@@ -73,7 +73,11 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
     {
         var s = _c.Settings;
         TodayValue.Text = s.ExecutionsToday.ToString();
-        TodaySub.Text = $"未匹配 {s.MissesToday} 次";
+        var week = (s.History ?? new()).TakeLast(7).ToList();
+        int runs = week.Sum(d => d.Executions), misses = week.Sum(d => d.Misses);
+        TodaySub.Text = week.Count == 0
+            ? $"未匹配 {s.MissesToday} 次"
+            : $"未匹配 {s.MissesToday} 次 · 前 {week.Count} 天日均 {runs / (double)week.Count:0.#} 次，未匹配率 {(runs + misses == 0 ? 0 : misses * 100.0 / (runs + misses)):0}%";
         BoundValue.Text = s.Commands.Count.ToString();
         int gestures = s.Gestures.Count(g => Directions.All.Contains(g.Direction));
         int workflows = s.Commands.Count(c => c.ActionKind == ActionKind.Workflow);

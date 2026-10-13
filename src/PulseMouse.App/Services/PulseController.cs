@@ -494,6 +494,14 @@ public sealed class PulseController : IDisposable
 
     private void OnHookState(string message)
     {
+        if (message.StartsWith("模拟输入"))
+        {
+            bool blocked = _hook.InjectionBlocked;
+            AddLog(message, "", blocked ? LogTone.Err : LogTone.Hit);
+            Shell?.Toast(blocked ? "模拟输入被拦截，右键和弦已暂停" : "模拟输入已恢复，右键和弦重新启用", blocked ? IconKind.Alert : IconKind.Info);
+            StateChanged?.Invoke();
+            return;
+        }
         AddLog(message, "", LogTone.None);
         if (message.Contains("已检测到侧键"))
         {
@@ -582,8 +590,12 @@ public sealed class PulseController : IDisposable
         ShowCapsule(FeedbackMode.Typing, pattern, command.Name + " · 正在执行", icon);
         try
         {
+            if (command.ActionKind == ActionKind.Shortcut && _hook.InjectionBlocked)
+                throw new InvalidOperationException("模拟输入被系统拦截，快捷键无法发送");
             await Task.Run(() => ActionRunner.Run(command, isWorkflow));
             Settings.ExecutionsToday++;
+            Settings.CommandsToday ??= new();
+            Settings.CommandsToday[command.Name] = Settings.CommandsToday.GetValueOrDefault(command.Name) + 1;
             AddActivity(new ActivityEntry(DateTime.Now, direction.Length > 0 ? ActivityType.Gesture : ActivityType.Ok, command.Name,
                 command.Pattern, command.ActionKind, TargetText(command), direction));
             AddLog("已请求执行：" + command.Name, "", LogTone.Hit);
@@ -648,6 +660,8 @@ public sealed class PulseController : IDisposable
         if (target.Length == 0) return "目标不能为空";
         if (kind == ActionKind.Url && (!Uri.TryCreate(target, UriKind.Absolute, out var uri) || (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps)))
             return "网址只支持 http:// 或 https://";
+        if (kind == ActionKind.Shortcut && !KeyChord.TryParse(target, out _))
+            return "无法识别的快捷键，例如 Ctrl+Shift+T、Win+D、VolumeUp";
         return null;
     }
 
@@ -684,9 +698,20 @@ public sealed class PulseController : IDisposable
         var today = DateTime.Today.ToString("yyyy-MM-dd");
         if (Settings.StatisticsDate != today)
         {
+            Settings.History ??= new();
+            if (Settings.StatisticsDate.Length > 0 && (Settings.ExecutionsToday > 0 || Settings.MissesToday > 0))
+            {
+                Settings.History.Add(new DailyStat
+                {
+                    Date = Settings.StatisticsDate, Executions = Settings.ExecutionsToday, Misses = Settings.MissesToday,
+                    Commands = Settings.CommandsToday ?? new()
+                });
+                if (Settings.History.Count > 90) Settings.History.RemoveRange(0, Settings.History.Count - 90);
+            }
             Settings.StatisticsDate = today;
             Settings.ExecutionsToday = 0;
             Settings.MissesToday = 0;
+            Settings.CommandsToday = new();
             changed = true;
         }
         var weekStart = DateTime.Today.AddDays(-(((int)DateTime.Today.DayOfWeek + 6) % 7)).ToString("yyyy-MM-dd");

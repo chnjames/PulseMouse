@@ -85,6 +85,14 @@ Check(shown.Select(c => c.Pattern).SequenceEqual(new[] { ".-", ".-." }) && hidde
 Check(RhythmHints.For(hintCommands, "--", 6).Shown.Count == 0, "hints: no reachable command");
 Console.WriteLine("Rhythm hint tests passed.");
 
+Check(KeyChord.TryParse("ctrl + shift + t", out var keys) && keys.ToString() == "Ctrl+Shift+T" && keys.Key == 'T', "shortcut parses case-insensitively and formats canonically");
+Check(KeyChord.TryParse("Shift+Win+d", out keys) && keys.ToString() == "Shift+Win+D", "modifiers are reordered");
+Check(KeyChord.TryParse("VolumeUp", out keys) && keys.Modifiers.Count == 0 && keys.Key == 0xAF, "media key without modifiers");
+Check(KeyChord.TryParse("Ctrl++", out keys) && keys.ToString() == "Ctrl+=", "plus key");
+Check(KeyChord.TryParse("Alt+F4", out keys) && keys.Key == 0x73 && KeyChord.TryParse("Control+PgDn", out keys) && keys.ToString() == "Ctrl+PageDown", "function keys and aliases");
+Check(!KeyChord.TryParse("Ctrl+Ctrl+C", out _) && !KeyChord.TryParse("Ctrl", out _) && !KeyChord.TryParse("Hyper+C", out _) && !KeyChord.TryParse(" ", out _), "invalid shortcuts rejected");
+Console.WriteLine("Shortcut tests passed.");
+
 var v07 = new AppSettings
 {
     StartupEnabled = true,

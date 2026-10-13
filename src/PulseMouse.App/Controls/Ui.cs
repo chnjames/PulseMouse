@@ -36,7 +36,7 @@ public static class Ui
     public static System.Windows.Media.Brush Brush(string key) => (System.Windows.Media.Brush)System.Windows.Application.Current.Resources[key];
 }
 
-public enum ChipKind { App, Folder, Url, Workflow, Muted }
+public enum ChipKind { App, Folder, Url, Workflow, Muted, Shortcut }
 
 /// <summary>Small colored tag: action kinds, counts and statuses.</summary>
 public sealed class KindChip : Border
@@ -71,6 +71,7 @@ public sealed class KindChip : Border
         ActionKind.Folder => ChipKind.Folder,
         ActionKind.Url => ChipKind.Url,
         ActionKind.Workflow => ChipKind.Workflow,
+        ActionKind.Shortcut => ChipKind.Shortcut,
         _ => ChipKind.App
     };
 
@@ -79,6 +80,7 @@ public sealed class KindChip : Border
         ActionKind.Folder => IconKind.Folder,
         ActionKind.Url => IconKind.Url,
         ActionKind.Workflow => IconKind.Workflow,
+        ActionKind.Shortcut => IconKind.Keyboard,
         _ => IconKind.App
     };
 
@@ -90,6 +92,7 @@ public sealed class KindChip : Border
             ChipKind.Folder => ("AmberBrush", "AmberDimBrush", IconKind.Folder, Loc.Kind(ActionKind.Folder)),
             ChipKind.Url => ("MintBrush", "MintDimBrush", IconKind.Url, Loc.Kind(ActionKind.Url)),
             ChipKind.Workflow => ("VioletBrush", "VioletDimBrush", IconKind.Workflow, Loc.Kind(ActionKind.Workflow)),
+            ChipKind.Shortcut => ("RoseBrush", "RoseDimBrush", IconKind.Keyboard, Loc.Kind(ActionKind.Shortcut)),
             _ => ("Text3Brush", "Surface2Brush", IconKind.None, "")
         };
         Background = Ui.Brush(bg);

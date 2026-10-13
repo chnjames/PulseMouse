@@ -45,6 +45,8 @@
     <SolidColorBrush x:Key="AmberDimBrush" Color="#1FE9C46A"/>
     <SolidColorBrush x:Key="VioletBrush" Color="#B794FF"/>
     <SolidColorBrush x:Key="VioletDimBrush" Color="#21B794FF"/>
+    <SolidColorBrush x:Key="RoseBrush" Color="#F38BB5"/>
+    <SolidColorBrush x:Key="RoseDimBrush" Color="#21F38BB5"/>
     <SolidColorBrush x:Key="CoralBrush" Color="#E27E68"/>
     <SolidColorBrush x:Key="CoralDimBrush" Color="#21E27E68"/>
     <SolidColorBrush x:Key="CoralLine28Brush" Color="#47E27E68"/>
