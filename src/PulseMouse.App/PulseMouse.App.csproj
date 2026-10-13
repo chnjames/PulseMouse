@@ -1,1 +1,19 @@
-<Project Sdk="Microsoft.NET.Sdk"><PropertyGroup><OutputType>WinExe</OutputType><UseWPF>true</UseWPF><UseWindowsForms>true</UseWindowsForms><AssemblyName>PulseMouse</AssemblyName></PropertyGroup><ItemGroup><ProjectReference Include="..\PulseMouse.Core\PulseMouse.Core.csproj"/><ProjectReference Include="..\PulseMouse.Windows\PulseMouse.Windows.csproj"/><ProjectReference Include="..\PulseMouse.Actions\PulseMouse.Actions.csproj"/><ProjectReference Include="..\PulseMouse.Infrastructure\PulseMouse.Infrastructure.csproj"/></ItemGroup></Project>
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>PulseMouse</AssemblyName>
+    <Version>0.8.0</Version>
+  </PropertyGroup>
+  <ItemGroup>
+    <Using Remove="System.Windows.Forms" />
+    <Using Remove="System.Drawing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\PulseMouse.Core\PulseMouse.Core.csproj" />
+    <ProjectReference Include="..\PulseMouse.Windows\PulseMouse.Windows.csproj" />
+    <ProjectReference Include="..\PulseMouse.Actions\PulseMouse.Actions.csproj" />
+    <ProjectReference Include="..\PulseMouse.Infrastructure\PulseMouse.Infrastructure.csproj" />
+  </ItemGroup>
+</Project>

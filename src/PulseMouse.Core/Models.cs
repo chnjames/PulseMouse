@@ -11,6 +11,8 @@ public sealed class CommandBinding
 }
 public sealed class AppSettings
 {
+    public const int CurrentSchemaVersion = 8;
+    public int SchemaVersion { get; set; } = CurrentSchemaVersion;
     public bool Enabled { get; set; } = true;
     public int MouseButton { get; set; } = 2; // compatibility with previous settings
     public MouseInputMode InputMode { get; set; } = MouseInputMode.Auto;
@@ -31,6 +33,7 @@ public sealed class AppSettings
     public bool CapsuleBreathing { get; set; } = true;
     public string StatisticsDate { get; set; } = "";
     public int ExecutionsToday { get; set; }
+    public int MissesToday { get; set; }
     public string StatisticsWeekStart { get; set; } = "";
     public double ActiveSecondsThisWeek { get; set; }
     public string AiProviderUrl { get; set; } = "https://chatgpt.com/";

@@ -1,0 +1,185 @@
+<UserControl x:Class="PulseMouse.App.Views.DashboardView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:PulseMouse.App.Controls">
+    <StackPanel>
+        <c:PageHeader x:Name="Header">
+            <Button Style="{StaticResource Btn}" c:Ui.Icon="Plus" Content="新建指令" Click="NewCommandClick"/>
+        </c:PageHeader>
+
+        <!-- stats -->
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="12"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ContentControl Style="{StaticResource Card}" Padding="18,16">
+                <StackPanel>
+                    <TextBlock x:Name="TodayValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource MintBrush}"/>
+                    <TextBlock Text="今日执行" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="TodaySub" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </ContentControl>
+            <ContentControl Grid.Column="2" Style="{StaticResource Card}" Padding="18,16">
+                <StackPanel>
+                    <TextBlock x:Name="BoundValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource BlueBrush}"/>
+                    <TextBlock Text="已绑定指令" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="BoundSub" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </ContentControl>
+            <ContentControl Grid.Column="4" Style="{StaticResource Card}" Padding="18,16">
+                <StackPanel>
+                    <TextBlock x:Name="WeekValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold"/>
+                    <TextBlock Text="本周运行时长" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock Text="按 PulseMouse 进程运行时间统计" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
+                </StackPanel>
+            </ContentControl>
+        </Grid>
+
+        <!-- live pulse + input route -->
+        <Grid Margin="0,0,0,14">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="300"/>
+            </Grid.ColumnDefinitions>
+            <ContentControl Style="{StaticResource Card}" Padding="22,18,22,16">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,14">
+                        <Border x:Name="StateChip" DockPanel.Dock="Right" Height="26" Padding="11,0" CornerRadius="13" BorderThickness="1" VerticalAlignment="Top">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <Ellipse x:Name="StateChipDot" Width="6" Height="6" Margin="0,0,7,0"/>
+                                <TextBlock x:Name="StateChipText" FontSize="11.5" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <StackPanel>
+                            <c:TrackedText Style="{StaticResource Eyebrow}" Text="LIVE PULSE"/>
+                            <TextBlock Style="{StaticResource H3}" Text="实时节奏"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel x:Name="Slots" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,6,0,16"/>
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" MinHeight="28">
+                        <c:Icon x:Name="StateIcon" Kind="Check" Size="18" Margin="0,0,10,0" VerticalAlignment="Center" Visibility="Collapsed" Foreground="{StaticResource MintBrush}"/>
+                        <TextBlock x:Name="StateText" FontFamily="{StaticResource DisplayFont}" FontSize="19" FontWeight="SemiBold" VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <TextBlock x:Name="SubText" FontSize="12" Foreground="{StaticResource Text3Brush}" HorizontalAlignment="Center" MinHeight="18" Margin="0,3,0,0" TextTrimming="CharacterEllipsis"/>
+                    <c:TimingRuler x:Name="Ruler" Margin="0,14,0,0"/>
+                    <Grid Margin="0,12,0,0" TextElement.FontSize="11" TextElement.Foreground="{StaticResource Text3Brush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="停顿提交" VerticalAlignment="Center"/>
+                        <Border x:Name="GapTrack" Grid.Column="1" Height="3" CornerRadius="1.5" Background="#0FFFFFFF" Margin="10,0" ClipToBounds="True">
+                            <Border x:Name="GapFill" HorizontalAlignment="Left" Width="0" Background="{StaticResource MintBrush}"/>
+                        </Border>
+                        <TextBlock x:Name="GapText" Grid.Column="2" VerticalAlignment="Center"/>
+                    </Grid>
+                    <WrapPanel x:Name="Candidates" Margin="0,14,0,0" MinHeight="28"/>
+                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,1,0,0" Margin="0,10,0,0" Padding="0,14,0,0">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Style="{StaticResource BtnSm}" Content="取消当前输入" Click="CancelClick"/>
+                            <Button x:Name="SimButton" DockPanel.Dock="Right" Style="{StaticResource SimButton}" Content="按住模拟" Margin="0,0,10,0"
+                                    PreviewMouseLeftButtonDown="SimDown" PreviewMouseLeftButtonUp="SimUp"/>
+                            <TextBlock x:Name="HintText" FontSize="11.5" Foreground="{StaticResource Text3Brush}" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"/>
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+            </ContentControl>
+
+            <ContentControl Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <StackPanel Margin="0,0,0,14">
+                        <c:TrackedText Style="{StaticResource Eyebrow}" Text="INPUT ROUTE"/>
+                        <TextBlock Style="{StaticResource H3}" Text="输入方式"/>
+                    </StackPanel>
+                    <ListBox x:Name="RouteList" Style="{StaticResource RadioCards}" SelectionChanged="RouteChanged">
+                        <ListBoxItem>
+                            <StackPanel>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock Style="{StaticResource RadioTitle}" Text="自动适配"/>
+                                    <c:KindChip Kind="Muted" Text="推荐" Height="18" Margin="6,0,0,0"/>
+                                </StackPanel>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="侧键优先；未检测到侧键时使用中键长按"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RadioTitle}" Text="X1 · 后退侧键"/>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="按住侧键直接输入节奏"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RadioTitle}" Text="X2 · 前进侧键"/>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="按住侧键直接输入节奏"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                        <ListBoxItem>
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource RadioTitle}" Text="中键长按 + 左键"/>
+                                <TextBlock Style="{StaticResource RadioDesc}" Text="静止长按中键激活，7 秒内用左键输入"/>
+                            </StackPanel>
+                        </ListBoxItem>
+                    </ListBox>
+                    <StackPanel Margin="0,6,0,0" TextElement.FontSize="12">
+                        <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,8">
+                            <DockPanel>
+                                <TextBlock x:Name="HookState" DockPanel.Dock="Right" FontWeight="SemiBold"/>
+                                <TextBlock Text="Hook 状态" Foreground="{StaticResource Text3Brush}"/>
+                            </DockPanel>
+                        </Border>
+                        <Border Padding="0,8">
+                            <DockPanel>
+                                <TextBlock x:Name="RouteActive" DockPanel.Dock="Right" FontWeight="SemiBold" Foreground="{StaticResource TextBrush}"/>
+                                <TextBlock Text="当前识别" Foreground="{StaticResource Text3Brush}"/>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                    <Button Style="{StaticResource BtnSm}" c:Ui.Icon="Refresh" Content="重新安装监听" HorizontalAlignment="Left" Margin="0,6,0,0" Click="ReinstallClick"/>
+                </StackPanel>
+            </ContentControl>
+        </Grid>
+
+        <!-- recent runs + diagnostics -->
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.1*"/>
+                <ColumnDefinition Width="14"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <ContentControl Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,14">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" Content="查看指令库" VerticalAlignment="Top" Click="OpenCommandsClick"/>
+                        <StackPanel>
+                            <c:TrackedText Style="{StaticResource Eyebrow}" Text="RECENT RUNS"/>
+                            <TextBlock Style="{StaticResource H3}" Text="最近执行"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <StackPanel x:Name="ActivityList"/>
+                </StackPanel>
+            </ContentControl>
+            <ContentControl Grid.Column="2" Style="{StaticResource Card}">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,14">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Copy" Content="复制" VerticalAlignment="Top" Click="CopyLogClick"/>
+                        <StackPanel>
+                            <c:TrackedText Style="{StaticResource Eyebrow}" Text="DIAGNOSTICS"/>
+                            <TextBlock Style="{StaticResource H3}" Text="诊断日志"/>
+                        </StackPanel>
+                    </DockPanel>
+                    <Border Height="262" CornerRadius="10" Background="{StaticResource Shade25Brush}" BorderBrush="{StaticResource LineBrush}" BorderThickness="1">
+                        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12,8">
+                            <StackPanel x:Name="LogList" TextElement.FontFamily="{StaticResource MonoFont}" TextElement.FontSize="11.5"/>
+                        </ScrollViewer>
+                    </Border>
+                </StackPanel>
+            </ContentControl>
+        </Grid>
+    </StackPanel>
+</UserControl>
