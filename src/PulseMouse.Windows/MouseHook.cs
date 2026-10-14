@@ -256,7 +256,7 @@ public sealed class MouseHook : IDisposable
             if (!_injectionBlocked)
             {
                 _injectionBlocked = true;
-                StateChanged?.Invoke("模拟输入被系统拦截（例如远程控制工具开启了屏蔽键鼠），右键和弦已暂停，右键恢复原生；快捷键动作也无法发送");
+                StateChanged?.Invoke("模拟输入被系统拦截：PulseMouse 补发的点击没有生效，右键和弦已暂停，右键恢复原生，快捷键动作也无法发送。常见原因：PulseMouse 由受限环境（如开发工具的终端）启动，或远程控制工具屏蔽了键鼠；请退出后直接双击启动");
             }
         }
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
@@ -351,8 +351,18 @@ public sealed class MouseHook : IDisposable
         }
     }
 
-    /// <summary>A zero-distance move tagged as ours; only used on demand so it never keeps the PC from idling.</summary>
-    private void Probe() => Inject(0x0001);
+    /// <summary>A 1 px nudge and back, tagged as ours (zero-distance moves may be dropped); only used on demand so it never keeps the PC from idling.</summary>
+    private void Probe()
+    {
+        _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
+        _awaitingEchoMs ??= _lastReplayMs;
+        var inputs = new[]
+        {
+            new Input { Type = 0, Mouse = new MouseInput { Dx = 1, Flags = 0x0001, ExtraInfo = InjectionMarker } },
+            new Input { Type = 0, Mouse = new MouseInput { Dx = -1, Flags = 0x0001, ExtraInfo = InjectionMarker } },
+        };
+        SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
+    }
 
     private void Inject(params uint[] flags)
     {
