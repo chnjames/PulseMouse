@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PulseMouse v0.9 · Context Pulse 效果图</title>
+<style>
+:root{
+  --win:#0A0D10;
+  --surface:rgba(255,255,255,.034);--surface-2:rgba(255,255,255,.055);--surface-3:rgba(255,255,255,.085);
+  --line:rgba(255,255,255,.07);--line-2:rgba(255,255,255,.12);--line-3:rgba(255,255,255,.2);
+  --text:#F2F7F8;--text-2:#A9B6BA;--text-3:#6E7D82;--text-4:#4C585C;
+  --mint:#51E6CA;--mint-d:rgba(81,230,202,.12);
+  --blue:#75B7FF;--blue-d:rgba(117,183,255,.12);
+  --amber:#E9C46A;--amber-d:rgba(233,196,106,.12);
+  --violet:#B794FF;--violet-d:rgba(183,148,255,.13);
+  --coral:#E27E68;--coral-d:rgba(226,126,104,.13);
+  --rose:#F38BB5;--rose-d:rgba(243,139,181,.13);
+  --r-card:14px;--r-ctl:10px;--r-chip:7px;
+  --f-body:"Segoe UI Variable Text","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;
+  --f-disp:"Segoe UI Variable Display","Segoe UI","Microsoft YaHei UI","PingFang SC",sans-serif;
+  --f-mono:"Cascadia Mono","Cascadia Code",Consolas,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#040506;overflow:hidden;font-family:var(--f-body);color:var(--text);-webkit-font-smoothing:antialiased}
+body.real{overflow:auto}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0}
+svg{flex:none}
+
+/* ---------- desktop stage ---------- */
+.desktop{position:absolute;left:50%;top:50%;width:1500px;height:1000px;transform-origin:center;overflow:hidden;
+  background:radial-gradient(1100px 700px at 25% 115%,rgba(38,66,110,.55),transparent 60%),radial-gradient(900px 600px at 88% -12%,rgba(24,86,80,.42),transparent 60%),linear-gradient(160deg,#0b1118,#06080b 60%)}
+body.real .desktop{position:relative;left:auto;top:auto;margin:0 auto;transform:none!important}
+.demo{position:absolute;left:16px;right:16px;top:9px;display:flex;align-items:center;gap:12px;font-size:12px;color:rgba(255,255,255,.55);white-space:nowrap}
+.demo b{color:#dfe7e9;font-weight:600}
+.demo kbd{font:600 10.5px var(--f-mono);padding:2px 6px;border-radius:5px;border:1px solid rgba(255,255,255,.2);color:#dfe7e9}
+.demo>button{height:24px;padding:0 10px;border-radius:6px;border:1px solid rgba(255,255,255,.18);font-size:11.5px;color:#dfe7e9;margin-left:auto}
+.demo>button:hover{background:rgba(255,255,255,.08)}
+.demo .seg{padding:2px;background:rgba(0,0,0,.35)}
+.demo .seg button{height:22px;padding:0 9px 0 4px;font-size:11.5px;color:#cfd6da}
+.taskbar{position:absolute;left:0;right:0;bottom:0;height:48px;background:rgba(20,24,30,.9);border-top:1px solid rgba(255,255,255,.06);display:flex;align-items:center;justify-content:center;gap:6px}
+.tb-app{width:40px;height:40px;border-radius:6px;display:grid;place-items:center;position:relative;cursor:pointer}
+.tb-app:hover{background:rgba(255,255,255,.05)}
+.tb-app.on{background:rgba(255,255,255,.07)}
+.tb-app.on::after{content:"";position:absolute;bottom:2px;left:15px;width:10px;height:3px;border-radius:2px;background:#cfd6da}
+.tb-right{position:absolute;right:14px;top:0;bottom:0;display:flex;align-items:center;gap:14px;font-size:12px;color:#cfd6da}
+.tray{width:28px;height:28px;border-radius:6px;display:grid;place-items:center}
+.tray:hover{background:rgba(255,255,255,.08)}
+.clock{text-align:right;line-height:1.3;font-size:11.5px}
+
+/* ---------- brand mark: dot + dash ---------- */
+.logo{width:18px;height:18px;border-radius:5px;background:linear-gradient(155deg,#8EF6E2,#2CC6A9);box-shadow:0 0 14px rgba(81,230,202,.3);position:relative;display:block;flex:none}
+.logo::before,.logo::after{content:"";position:absolute;top:39%;height:22%;border-radius:9px;background:#06120F}
+.logo::before{left:11%;width:22%}
+.logo::after{left:44%;width:44%}
+.logo.dark{width:24px;height:24px;border-radius:7px;background:linear-gradient(155deg,#1D272B,#0A0F12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.14)}
+.logo.dark::before,.logo.dark::after{background:linear-gradient(#8EF6E2,#2CC6A9)}
+.logo.sm{width:15px;height:15px;border-radius:4px;box-shadow:none}
+
+/* ---------- window ---------- */
+.window{position:absolute;left:140px;top:44px;width:1220px;height:820px;border-radius:10px;overflow:hidden;display:grid;grid-template-rows:44px minmax(0,1fr) 30px;
+  background:radial-gradient(820px 520px at 88% -12%,rgba(81,230,202,.075),transparent 62%),radial-gradient(700px 500px at -5% 110%,rgba(117,183,255,.045),transparent 60%),var(--win);
+  border:1px solid rgba(255,255,255,.09);box-shadow:0 30px 80px rgba(0,0,0,.6),0 0 0 1px rgba(0,0,0,.4)}
+.window.max{left:0;top:0;width:1500px;height:952px;border-radius:0}
+.window.hidden{display:none}
+.titlebar{display:flex;align-items:center;justify-content:space-between;padding-left:16px;border-bottom:1px solid var(--line);background:rgba(255,255,255,.012);user-select:none}
+.tb-id{display:flex;align-items:center;gap:10px}
+.wordmark{font-size:12.5px;font-weight:600}
+.ver{font:600 10px var(--f-mono);color:var(--mint);background:var(--mint-d);border:1px solid rgba(81,230,202,.2);padding:2px 7px;border-radius:99px}
+.wc{display:flex;height:100%}
+.wc button{width:46px;height:100%;display:grid;place-items:center;color:var(--text-3)}
+.wc button:hover{background:rgba(255,255,255,.06);color:var(--text)}
+.wc button.close:hover{background:#c42b1c;color:#fff}
+.body{display:grid;grid-template-columns:224px minmax(0,1fr);min-height:0}
+
+/* ---------- sidebar ---------- */
+.sidebar{background:rgba(255,255,255,.014);border-right:1px solid var(--line);padding:18px 12px 14px;display:flex;flex-direction:column;min-height:0}
+.nav-label{font:600 10.5px var(--f-mono);letter-spacing:.12em;color:var(--text-4);padding:0 10px 8px;text-transform:uppercase}
+.nav{display:grid;gap:2px}
+.nav-item{display:flex;align-items:center;gap:11px;height:38px;padding:0 10px 0 12px;border-radius:9px;color:var(--text-2);font-size:13px;position:relative;width:100%;text-align:left;transition:background .15s,color .15s}
+.nav-item:hover{background:rgba(255,255,255,.04);color:var(--text)}
+.nav-item.active{background:var(--mint-d);color:var(--text)}
+.nav-item.active::before{content:"";position:absolute;left:0;top:11px;bottom:11px;width:3px;border-radius:2px;background:var(--mint)}
+.nav-item.active svg{color:var(--mint)}
+.nav-item .meta{margin-left:auto;font:500 11px var(--f-mono);color:var(--text-3)}
+.nav-sep{height:1px;background:var(--line);margin:10px 8px}
+.engine{margin-top:auto;padding:14px;border-radius:12px;background:var(--surface);border:1px solid var(--line)}
+.engine-top{display:flex;align-items:center;gap:9px}
+.engine-top b{font-size:13px;font-weight:600;flex:1}
+.engine-sub{font-size:11.5px;color:var(--text-3);margin-top:8px;line-height:1.5}
+.sdot{width:8px;height:8px;border-radius:50%;background:var(--mint);box-shadow:0 0 10px rgba(81,230,202,.65);flex:none;animation:beat 2.4s ease-in-out infinite}
+.sdot.off{background:#6b7478;box-shadow:none;animation:none}
+@keyframes beat{50%{opacity:.55}}
+
+/* ---------- main & page shell ---------- */
+.main{overflow-y:auto;min-height:0;padding:22px 28px 32px;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent;position:relative}
+.page{display:none}.page.active{display:block;animation:in .22s ease}
+@keyframes in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.page-hd{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:18px;min-height:66px}
+.eyebrow{font:600 10.5px var(--f-mono);letter-spacing:.14em;color:var(--text-3);text-transform:uppercase}
+.page-hd .eyebrow{color:var(--mint)}
+.page-hd h1{font:600 26px/1.2 var(--f-disp);letter-spacing:-.01em;margin:6px 0 4px}
+.page-hd p{font-size:12.5px;color:var(--text-2)}
+.page-actions{display:flex;gap:8px;align-items:center}
+
+/* ---------- primitives ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r-card);padding:18px;position:relative}
+.card::before{content:"";position:absolute;left:16px;right:16px;top:-1px;height:1px;background:linear-gradient(90deg,transparent,rgba(255,255,255,.13),transparent);pointer-events:none}
+.card-hd{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:14px}
+.card-hd h3{font:600 15px var(--f-disp);margin-top:5px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;height:34px;padding:0 14px;border-radius:var(--r-ctl);border:1px solid var(--line-2);background:var(--surface-2);font-size:12.5px;font-weight:600;color:var(--text);transition:background .15s,border-color .15s;white-space:nowrap}
+.btn:hover{background:var(--surface-3);border-color:var(--line-3)}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--mint);border-color:var(--mint);color:#06120f}
+.btn.primary:hover{background:#6af0d6}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--text-2)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--text)}
+.btn.danger{color:var(--coral);background:transparent;border-color:rgba(226,126,104,.28)}
+.btn.danger:hover{background:var(--coral-d)}
+.btn.sm{height:28px;padding:0 10px;font-size:12px;border-radius:8px}
+.btn.xs{height:24px;padding:0 8px;font-size:11.5px;border-radius:7px;font-weight:500;color:var(--text-2)}
+.btn.icon{width:34px;padding:0}.btn.sm.icon{width:28px}
+.btn[disabled]{opacity:.35;pointer-events:none}
+.field{display:grid;gap:7px;margin-bottom:15px}
+.field>label{font-size:12px;color:var(--text-2);font-weight:500;display:flex;justify-content:space-between;align-items:center}
+.field>label span{font:500 11px var(--f-mono);color:var(--text-3)}
+.fhint{font-size:11.5px;color:var(--text-3);display:flex;gap:6px;align-items:center;line-height:1.5}
+.input{height:36px;border-radius:var(--r-ctl);border:1px solid var(--line-2);background:rgba(0,0,0,.28);padding:0 12px;font-size:13px;outline:none;width:100%;transition:border-color .15s,box-shadow .15s}
+.input:hover{border-color:var(--line-3)}
+.input:focus{border-color:rgba(81,230,202,.6);box-shadow:0 0 0 3px rgba(81,230,202,.1)}
+.input.mono{font-family:var(--f-mono);font-size:12.5px}
+.input::placeholder{color:var(--text-4)}
+.input-row{display:flex;gap:8px}
+.seg{display:inline-flex;padding:3px;border-radius:10px;background:rgba(0,0,0,.28);border:1px solid var(--line);gap:2px}
+.seg button{height:28px;padding:0 12px;border-radius:7px;font-size:12px;color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:background .15s,color .15s;white-space:nowrap}
+.seg button:hover{color:var(--text)}
+.seg button.on{background:var(--surface-3);color:var(--text);box-shadow:inset 0 0 0 1px var(--line-2)}
+.seg button[disabled]{opacity:.4;pointer-events:none}
+.seg.full{display:flex}.seg.full button{flex:1}
+.seg.grid3{display:grid;grid-template-columns:repeat(3,1fr)}
+.switch{width:40px;height:22px;border-radius:11px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.08);position:relative;transition:background .18s;flex:none}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#d6dee0;transition:left .18s,background .18s}
+.switch.on{background:var(--mint);border-color:var(--mint)}
+.switch.on::after{left:20px;background:#06120f}
+.tag{display:inline-flex;align-items:center;gap:5px;height:22px;padding:0 8px;border-radius:var(--r-chip);font-size:11px;font-weight:600;white-space:nowrap}
+.k-app{color:var(--blue);background:var(--blue-d)}.k-folder{color:var(--amber);background:var(--amber-d)}
+.k-url{color:var(--mint);background:var(--mint-d)}.k-workflow{color:var(--violet);background:var(--violet-d)}
+.k-shortcut{color:var(--rose);background:var(--rose-d)}.k-repeat{color:#d6dee0;background:rgba(255,255,255,.075)}
+.k-muted{color:var(--text-3);background:var(--surface-2)}
+.glyph{display:inline-flex;gap:4px;align-items:center}
+.glyph i{display:block;height:6px;border-radius:3px;background:currentColor}
+.glyph i.d{width:6px}.glyph i.l{width:16px}
+.glyph.md{gap:6px}.glyph.md i{height:8px;border-radius:4px}.glyph.md i.d{width:8px}.glyph.md i.l{width:22px}
+.glyph.lg{gap:8px}.glyph.lg i{height:12px;border-radius:6px}.glyph.lg i.d{width:12px}.glyph.lg i.l{width:34px}
+.pchip{display:grid;place-items:center;width:64px;height:40px;border-radius:10px;background:rgba(0,0,0,.3);border:1px solid var(--line-2);color:var(--mint)}
+.note{display:flex;gap:9px;align-items:flex-start;font-size:11.5px;line-height:1.6;color:var(--text-3);padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.18);border:1px solid var(--line)}
+.note svg{margin-top:2px}
+.sp{flex:1}
+.av{display:inline-grid;place-items:center;border-radius:5px;background:var(--c);color:#fff;font-weight:700;flex:none;line-height:1;font-family:var(--f-body)}
+kbd{font:600 11px var(--f-mono);padding:1px 6px;border-radius:5px;border:1px solid var(--line-2);border-bottom-width:2px;background:rgba(255,255,255,.04);color:var(--text-2)}
+.keys{display:inline-flex;align-items:center;gap:3px}
+.keys em{font-style:normal;color:var(--text-4);font-size:10px}
+.lockic{color:var(--text-3);display:inline-flex}
+
+/* ---------- dashboard ---------- */
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+.stat{padding:16px 18px}
+.stat .v{font:600 26px/1.1 var(--f-disp);font-variant-numeric:tabular-nums}
+.stat .l{font-size:12.5px;color:var(--text-2);margin-top:4px}
+.stat .s{font-size:11.5px;color:var(--text-3);margin-top:8px;display:flex;gap:6px;align-items:center}
+.dash-row{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:14px;margin-bottom:14px}
+.dash-row2{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:14px}
+.state{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px;border-radius:99px;font-size:11.5px;font-weight:600;border:1px solid var(--line-2);color:var(--text-2);background:var(--surface)}
+.state i{width:6px;height:6px;border-radius:50%;background:currentColor}
+.state.live{color:var(--mint);border-color:rgba(81,230,202,.3);background:var(--mint-d)}
+.state.bad{color:var(--coral);border-color:rgba(226,126,104,.3);background:var(--coral-d)}
+.ctxchip{display:inline-flex;align-items:center;gap:7px;height:26px;padding:0 11px 0 5px;border-radius:99px;border:1px solid var(--line-2);font-size:11.5px;color:var(--text-2);background:var(--surface)}
+.ctxchip b{color:var(--text);font-weight:600}
+.hero{padding:18px 22px 16px;user-select:none}
+.slots{display:flex;gap:10px;justify-content:center;margin:6px 0 16px}
+.slot{width:74px;height:60px;border-radius:12px;border:1px dashed rgba(255,255,255,.12);display:grid;place-items:center;color:var(--mint);background:rgba(0,0,0,.16);transition:border-color .15s,background .15s,box-shadow .15s}
+.slot.filled{border-style:solid;border-color:rgba(81,230,202,.35);background:var(--mint-d);box-shadow:0 0 24px rgba(81,230,202,.12)}
+.slot.next{border-color:rgba(81,230,202,.4)}
+.slot.pressing{border-style:solid;border-color:var(--mint);animation:press .8s ease-in-out infinite}
+.slot.miss{border-color:rgba(226,126,104,.4);background:var(--coral-d);color:var(--coral)}
+@keyframes press{50%{box-shadow:0 0 0 4px rgba(81,230,202,.14)}}
+.hero-state{text-align:center;font:600 19px var(--f-disp);display:flex;justify-content:center;align-items:center;gap:10px;min-height:28px}
+.hero-sub{text-align:center;font-size:12px;color:var(--text-3);min-height:18px;margin-top:3px}
+.ruler{position:relative;padding-top:20px;margin-top:14px}
+.rz{position:relative;height:10px;border-radius:5px;background:rgba(255,255,255,.03)}
+.z{position:absolute;top:0;bottom:0}
+.z.dot{background:rgba(81,230,202,.42);border-radius:2px}
+.z.dash{background:rgba(117,183,255,.38);border-radius:2px}
+.z.amb{background:repeating-linear-gradient(135deg,rgba(226,126,104,.3) 0 4px,transparent 4px 8px)}
+.z.inv{background:rgba(255,255,255,.035)}
+.needle{position:absolute;top:-6px;bottom:-6px;width:2px;margin-left:-1px;background:#fff;border-radius:1px;left:0;box-shadow:0 0 10px rgba(255,255,255,.55);opacity:0;transition:opacity .15s}
+.needle.on{opacity:1}
+.needle em{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);font:600 10.5px var(--f-mono);font-style:normal;white-space:nowrap;margin-bottom:3px;color:var(--text)}
+.rl{position:relative;height:16px;margin-top:8px;font-size:11px;color:var(--text-3)}
+.rl span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.rl span.amb{color:rgba(226,126,104,.85)}
+.holdbar{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;margin-top:12px;font-size:11px;color:var(--text-3)}
+.hold-track{height:3px;border-radius:2px;background:rgba(255,255,255,.06);overflow:hidden}
+.hold-track i{display:block;height:100%;width:0;background:var(--mint)}
+.cands{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:14px;min-height:28px}
+.cands>span:first-child{font-size:11px;color:var(--text-3);margin-right:4px;display:inline-flex;gap:6px;align-items:center}
+.cand{display:inline-flex;align-items:center;gap:8px;height:26px;padding:0 10px;border-radius:8px;border:1px solid var(--line);background:rgba(0,0,0,.2);font-size:11.5px;color:var(--text-2)}
+.cand .glyph{color:var(--text-3)}
+.cand.own{border-color:rgba(81,230,202,.3)}
+.cand.hit{color:var(--text)}.cand.hit .glyph{color:var(--mint)}
+.cand.exact{background:var(--mint-d);border-color:rgba(81,230,202,.4)}
+.hero-ft{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.hero-ft .hint{flex:1;font-size:11.5px;color:var(--text-3);display:flex;gap:6px;align-items:center}
+.radio-list{display:grid;gap:6px}
+.radio{display:flex;gap:10px;align-items:flex-start;padding:9px 12px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.15);text-align:left;width:100%;transition:border-color .15s,background .15s}
+.radio:hover{border-color:var(--line-2)}
+.radio .rd{width:16px;height:16px;border-radius:50%;border:1.5px solid var(--line-3);margin-top:1px;flex:none;position:relative}
+.radio.on{border-color:rgba(81,230,202,.35);background:var(--mint-d)}
+.radio.on .rd{border-color:var(--mint)}.radio.on .rd::after{content:"";position:absolute;inset:3px;border-radius:50%;background:var(--mint)}
+.radio b{font-size:12.5px;font-weight:600;display:block}
+.radio small{font-size:11px;color:var(--text-3);display:block;margin-top:2px;line-height:1.45}
+.act{display:grid;grid-template-columns:30px minmax(0,1fr) auto;gap:11px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.act:last-child{border-bottom:0}
+.act .ic{width:30px;height:30px;border-radius:9px;display:grid;place-items:center}
+.ic.ok{color:var(--mint);background:var(--mint-d)}.ic.miss{color:var(--coral);background:var(--coral-d)}.ic.sys{color:var(--text-3);background:var(--surface-2)}
+.act .t{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.act .s{font-size:11.5px;color:var(--text-3);margin-top:3px;display:flex;gap:7px;align-items:center;white-space:nowrap;overflow:hidden}
+.act .s .glyph{color:var(--text-2)}
+.act .ctx{display:inline-flex;align-items:center;gap:5px;color:var(--text-2)}
+.act time{font:11px var(--f-mono);color:var(--text-3)}
+.log{font:11.5px/1.85 var(--f-mono);color:var(--text-2);height:262px;overflow:auto;background:rgba(0,0,0,.25);border-radius:10px;padding:8px 12px;border:1px solid var(--line);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.12) transparent}
+.log div{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.log .tm{color:var(--text-4)}.log .hit{color:var(--mint)}.log .pass{color:var(--text-3)}.log .err{color:var(--coral)}
+
+/* ---------- commands: rhythm map, list, inspector ---------- */
+.split{display:grid;grid-template-columns:minmax(0,1fr) 364px;gap:14px;align-items:start}
+.toolbar{display:flex;gap:10px;align-items:center;margin-bottom:12px}
+.search{position:relative;flex:1;min-width:150px}
+.search svg{position:absolute;left:11px;top:10px;color:var(--text-3)}
+.search .input{padding-left:34px}
+.legend{display:flex;gap:14px;align-items:center;font-size:11px;color:var(--text-3);flex:1;justify-content:flex-end}
+.legend span{display:inline-flex;gap:6px;align-items:center}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block}
+.map{border:1px solid var(--line);border-radius:12px;overflow-x:auto;background:var(--surface);scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.14) transparent}
+.map.off .cell.own,.map.off .cell.inh{opacity:.45}
+.mapoff{display:flex;gap:8px;align-items:center;font-size:11.5px;color:var(--amber);background:var(--amber-d);border-radius:10px;padding:8px 12px;margin-bottom:10px}
+.mrow{display:grid;grid-template-columns:72px repeat(var(--cols),minmax(150px,1fr));min-width:calc(72px + var(--cols) * 150px);border-bottom:1px solid var(--line)}
+.colx{width:20px;height:20px;border-radius:6px;display:grid;place-items:center;color:var(--text-3);opacity:.35;margin-left:4px;transition:opacity .15s,background .15s}
+.mhd>div:hover .colx{opacity:1}
+.colx:hover{background:var(--coral-d);color:var(--coral)}
+.btn.danger-solid{background:var(--coral);border-color:var(--coral);color:#1a0b07}
+.btn.danger-solid:hover{background:#ec9180}
+.trow.pick{grid-template-columns:22px minmax(0,1fr) auto}
+.trow.pick .proc{font:11px var(--f-mono);color:var(--text-3);margin-left:6px}
+.trow.rm{grid-template-columns:58px minmax(0,1fr) auto;pointer-events:none}
+.mrow:last-child{border-bottom:0}
+.mhd{background:rgba(0,0,0,.25);font-size:12px;color:var(--text-2)}
+.mhd>div{padding:10px 10px;display:flex;align-items:center;gap:7px;font-weight:600;border-right:1px solid var(--line);white-space:nowrap;overflow:hidden}
+.mhd>div:last-child{border-right:0}
+.mhd .here{margin-left:auto;font:600 9.5px var(--f-mono);letter-spacing:.06em;color:var(--mint);display:inline-flex;align-items:center;gap:4px}
+.mhd .here i{width:6px;height:6px;border-radius:50%;background:var(--mint);box-shadow:0 0 8px rgba(81,230,202,.7)}
+.mp{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--mint);border-right:1px solid var(--line);background:rgba(0,0,0,.12)}
+.mrow.pinned .mp{color:var(--text-2)}
+.cell{min-height:50px;padding:7px 10px;border-right:1px solid var(--line);text-align:left;display:flex;flex-direction:column;justify-content:center;gap:4px;position:relative;width:100%;min-width:0;transition:background .12s}
+.cell:last-child{border-right:0}
+.cell .cn{font-size:12.5px;font-weight:600;display:flex;gap:6px;align-items:center;white-space:nowrap;overflow:hidden}
+.cell .cs{font:10.5px var(--f-mono);color:var(--text-3);white-space:nowrap;overflow:hidden;display:flex;gap:6px;align-items:center}
+.cell .cs kbd{font-size:10px;padding:0 4px}
+.cell:hover{background:rgba(255,255,255,.04)}
+.cell.here{background:rgba(81,230,202,.025)}
+.cell.inh .cn{color:var(--text-3);font-weight:500}
+.cell.free .cn{color:var(--text-4);font-weight:500}
+.cell.free:hover .cn{color:var(--text-2)}
+.cell.own{background:rgba(81,230,202,.07);box-shadow:inset 3px 0 0 var(--mint)}
+.cell.own.rep{background:rgba(233,196,106,.07);box-shadow:inset 3px 0 0 var(--amber)}
+.cell.lock{cursor:not-allowed;background:repeating-linear-gradient(135deg,rgba(255,255,255,.018) 0 6px,transparent 6px 12px)}
+.cell.lock .cn{color:var(--text-4);font-weight:500}
+.cell.sel{outline:1.5px solid var(--mint);outline-offset:-2px;z-index:1}
+.cell .cnt{margin-left:auto;font:500 10px var(--f-mono);color:var(--text-4)}
+.grp{display:flex;align-items:center;gap:8px;margin:18px 2px 8px;font-size:11.5px;color:var(--text-3)}
+.grp:first-child{margin-top:2px}
+.grp b{color:var(--text);font-size:12.5px;font-weight:600}
+.list{display:grid;gap:8px}
+.item{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:14px;align-items:center;padding:11px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);text-align:left;width:100%;transition:background .15s,border-color .15s}
+.item:hover{background:var(--surface-2);border-color:var(--line-2)}
+.item.sel{border-color:rgba(81,230,202,.4);background:rgba(81,230,202,.055);box-shadow:inset 3px 0 0 var(--mint)}
+.item .n{font-size:13.5px;font-weight:600;display:flex;gap:6px;align-items:center}
+.item .tg{font:11.5px var(--f-mono);color:var(--text-3);white-space:nowrap;overflow:hidden;margin-top:5px;display:flex;align-items:center;gap:8px}
+.item .right{display:flex;flex-direction:column;align-items:flex-end;gap:7px}
+.rep-chip{display:inline-flex;align-items:center;gap:4px;height:19px;padding:0 7px;border-radius:6px;font:600 10.5px var(--f-body);color:var(--amber);background:var(--amber-d);white-space:nowrap}
+.muted-chip{font:11px var(--f-body);color:var(--text-3);display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+.use{display:flex;align-items:center;gap:7px;font:600 11px var(--f-mono);color:var(--text-2)}
+.use.cold{color:var(--text-4)}
+.heat{display:inline-flex;align-items:flex-end;gap:2px;height:14px}
+.heat i{width:3px;border-radius:1px;background:var(--mint);display:block}
+.heat i.zero{background:rgba(255,255,255,.12)}
+.heat.big{height:46px;gap:6px;width:100%}
+.heat.big i{flex:1;width:auto;border-radius:3px}
+.inspector{position:sticky;top:0;padding:0;overflow:hidden}
+.insp-hd{padding:16px 18px 14px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.insp-hd h3{font:600 15px var(--f-disp);margin-top:5px;display:flex;align-items:center;gap:8px}
+.insp-bd{padding:16px 18px 2px}
+.insp-ft{padding:12px 18px;border-top:1px solid var(--line);display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.16)}
+.apps{display:flex;flex-wrap:wrap;gap:6px}
+.appchip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 10px 0 6px;border-radius:9px;border:1px solid var(--line-2);background:rgba(0,0,0,.2);font-size:12px;color:var(--text-2);transition:border-color .15s,background .15s}
+.appchip:hover{border-color:var(--line-3);color:var(--text)}
+.appchip.on{border-color:rgba(81,230,202,.45);background:var(--mint-d);color:var(--text)}
+.appchip.ghost{border-style:dashed;padding-left:9px}
+.pinrow{display:flex;gap:12px;align-items:center;padding:11px 12px;border-radius:10px;border:1px solid var(--line-2);background:rgba(0,0,0,.2)}
+.pinrow .pi{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--surface-2);color:var(--text-2);flex:none}
+.pinrow.on .pi{background:var(--mint-d);color:var(--mint)}
+.pinrow b{font-size:12.5px;font-weight:600;display:block}
+.pinrow small{font-size:11px;color:var(--text-3);display:block;margin-top:2px;line-height:1.45}
+.where{display:grid;gap:5px}
+.where div{display:flex;gap:8px;align-items:center;font-size:12px;color:var(--text-2);padding:6px 10px;border-radius:8px;background:rgba(0,0,0,.18)}
+.composer{border:1px solid var(--line-2);border-radius:12px;background:rgba(0,0,0,.22);padding:10px}
+.cslots{display:flex;gap:6px;margin-bottom:10px}
+.cslot{flex:1;height:40px;border-radius:9px;border:1px dashed rgba(255,255,255,.12);display:grid;place-items:center;color:var(--mint)}
+.cslot.filled{border-style:solid;border-color:rgba(81,230,202,.3);background:var(--mint-d)}
+.cslot.err{border-color:rgba(226,126,104,.4);background:var(--coral-d);color:var(--coral)}
+.cslot.warn{border-color:rgba(233,196,106,.42);background:var(--amber-d);color:var(--amber)}
+.cbtns{display:flex;gap:6px;align-items:center}
+.cbtns .glyph{color:var(--mint)}
+.cmsg{font-size:11.5px;margin-top:9px;display:flex;gap:6px;align-items:flex-start;line-height:1.5}
+.cmsg svg{margin-top:2px}
+.cmsg.ok{color:var(--mint)}.cmsg.err{color:var(--coral)}.cmsg.warn{color:var(--amber)}.cmsg.muted{color:var(--text-3)}
+.sugg{display:flex;gap:6px;align-items:center;margin-top:8px;font-size:11.5px;color:var(--text-3)}
+.sugg .btn{color:var(--mint)}
+.keycap{min-height:40px;border-radius:10px;border:1px solid var(--line-2);background:rgba(0,0,0,.28);display:flex;align-items:center;gap:5px;padding:0 12px;outline:none;cursor:text}
+.keycap:hover{border-color:var(--line-3)}
+.keycap:focus{border-color:rgba(81,230,202,.6);box-shadow:0 0 0 3px rgba(81,230,202,.1)}
+.keycap kbd{font-size:12.5px;padding:3px 8px;color:var(--text)}
+.keycap .ph{color:var(--text-4);font-size:12.5px}
+.presets{display:flex;flex-wrap:wrap;gap:5px}
+.usage .days{display:flex;gap:6px;margin-top:5px}
+.usage .days span{flex:1;text-align:center;font:10.5px var(--f-mono);color:var(--text-4)}
+.usage .days span.today{color:var(--text-2)}
+.empty{padding:26px 18px;text-align:center;color:var(--text-3);font-size:12.5px;border:1px dashed var(--line-2);border-radius:12px}
+
+/* settings */
+.settings-wrap{max-width:840px}
+.sgroup{margin-bottom:20px}
+.sgroup-t{font-size:12px;font-weight:600;color:var(--text-2);margin:0 2px 8px;display:flex;align-items:center;gap:8px}
+.srows{padding:2px 18px}
+.srow{display:flex;align-items:center;gap:20px;padding:14px 0;border-bottom:1px solid var(--line);min-height:62px}
+.srow:last-child{border-bottom:0}
+.srow .info{flex:1;min-width:0}
+.srow .nm{font-size:13px;font-weight:600}
+.srow .ds{font-size:11.5px;color:var(--text-3);margin-top:3px;line-height:1.5}
+.srow .ctl{display:flex;align-items:center;gap:10px}
+.new{font:600 9.5px var(--f-mono);letter-spacing:.08em;color:var(--mint);border:1px solid rgba(81,230,202,.3);border-radius:5px;padding:1px 5px}
+
+/* status bar, toast, modal */
+.statusbar{display:flex;align-items:center;gap:18px;padding:0 14px;border-top:1px solid var(--line);background:rgba(0,0,0,.28);font-size:11.5px;color:var(--text-3);white-space:nowrap}
+.sb{display:flex;align-items:center;gap:7px}
+.sb .sdot{width:7px;height:7px}
+.toast{position:absolute;left:50%;bottom:44px;transform:translate(-50%,8px);background:#192026;border:1px solid var(--line-2);border-radius:10px;padding:8px 14px;font-size:12px;opacity:0;transition:opacity .18s,transform .18s;pointer-events:none;z-index:30;display:flex;gap:8px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast svg{color:var(--mint)}
+.modal-bg{position:absolute;inset:44px 0 0 0;background:rgba(4,6,8,.62);display:none;place-items:center;z-index:20}
+.modal-bg.show{display:grid;animation:in .15s ease}
+.modal{width:600px;border-radius:14px;background:#12171c;border:1px solid var(--line-2);box-shadow:0 24px 70px rgba(0,0,0,.65);overflow:hidden}
+.tpl{padding:20px 20px 10px}
+.tpl-hd{display:flex;gap:14px;margin-bottom:16px}
+.modal-ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;flex:none;color:var(--mint);background:var(--mint-d)}
+.modal h4{font:600 15px var(--f-disp);margin-bottom:6px}
+.modal p{font-size:12.5px;color:var(--text-2);line-height:1.6}
+.tpl .field{margin-bottom:12px}
+.trow{display:grid;grid-template-columns:20px 58px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px;border-radius:10px;border:1px solid var(--line);background:rgba(0,0,0,.16);margin-bottom:6px;width:100%;text-align:left;font-size:12.5px}
+.trow:hover{border-color:var(--line-2)}
+.trow.dis{opacity:.5;pointer-events:none}
+.trow .glyph{color:var(--mint)}
+.cb{width:18px;height:18px;border-radius:5px;border:1.5px solid var(--line-3);display:grid;place-items:center;color:#06120f}
+.cb.on{background:var(--mint);border-color:var(--mint)}
+.st{font-size:11px;font-weight:600;white-space:nowrap;display:inline-flex;gap:5px;align-items:center}
+.st .glyph{color:inherit}
+.st.ok{color:var(--text-3)}.st.warn{color:var(--amber)}.st.dis{color:var(--text-3)}.st.move{color:var(--blue)}
+.modal-ft{display:flex;align-items:center;gap:8px;padding:12px 16px;background:rgba(0,0,0,.22);border-top:1px solid var(--line)}
+.ft-note{font-size:11.5px;color:var(--text-3);display:inline-flex;gap:6px;align-items:center}
+
+/* ---------- on-screen capsule + rhythm hint (FeedbackWindow) ---------- */
+.capsule{position:absolute;bottom:70px;left:50%;translate:-50% 0;height:56px;min-width:400px;max-width:560px;border-radius:28px;display:flex;align-items:center;gap:12px;padding:0 24px 0 10px;background:rgba(14,18,22,.97);border:1px solid rgba(81,230,202,.44);box-shadow:0 12px 34px rgba(0,0,0,.5);opacity:0;transform:translateY(10px);transition:opacity .2s,transform .2s;pointer-events:none;z-index:40}
+.capsule.show{opacity:1;transform:none}
+.capsule .orb{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;background:var(--mint-d);color:var(--mint);flex:none}
+.capsule .cp{color:var(--mint);display:flex;align-items:center;min-width:24px}
+.capsule .div{width:1px;height:22px;background:var(--line-2)}
+.capsule .ct{display:grid;gap:2px;min-width:0;flex:1}
+.capsule .ct small{font:600 10.5px var(--f-body);letter-spacing:.02em;color:var(--text-3);display:flex;align-items:center;gap:6px;white-space:nowrap}
+.capsule .ct small b{color:var(--text-2);font-weight:600}
+.capsule .ct span{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.capsule.failed{border-color:rgba(226,126,104,.8)}
+.capsule.failed .orb{color:var(--coral);background:var(--coral-d)}.capsule.failed .cp{color:var(--coral)}
+.capsule.remind{border-color:rgba(233,196,106,.7)}
+.capsule.remind .ct small,.capsule.remind .ct small b{color:var(--amber)}
+.capsule.breath{animation:breath 1.8s ease-in-out infinite}
+@keyframes breath{50%{opacity:.74}}
+.hintcard{position:absolute;bottom:136px;left:50%;translate:-50% 0;width:420px;border-radius:16px;background:rgba(14,18,22,.97);border:1px solid var(--line-2);box-shadow:0 14px 40px rgba(0,0,0,.5);padding:10px 10px 8px;opacity:0;transform:translateY(8px);transition:opacity .18s,transform .18s;pointer-events:none;z-index:40}
+.hintcard.show{opacity:1;transform:none}
+.hint-hd{display:flex;align-items:center;gap:8px;font-size:12px;padding:2px 6px 8px;border-bottom:1px solid var(--line);margin-bottom:5px}
+.hint-hd b{font-weight:600}
+.hint-hd span{margin-left:auto;color:var(--text-3);font-size:11px}
+.hrow{display:grid;grid-template-columns:62px minmax(0,1fr) auto;align-items:center;gap:10px;height:30px;padding:0 6px;border-radius:8px;font-size:12.5px;color:var(--text-2)}
+.hrow .glyph i{background:var(--text-4)}
+.hrow .glyph i.on{background:var(--mint)}
+.hrow.exact{background:var(--mint-d);color:var(--text)}
+.hrow em{font-style:normal;font-size:10.5px;color:var(--text-3);display:inline-flex;gap:5px;align-items:center}
+.hrow em.rep{color:var(--amber)}
+.hrow.none{grid-template-columns:1fr;color:var(--text-3);font-size:12px}
+.hmore{font-size:11px;color:var(--text-3);padding:4px 6px 0}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="desktop" id="desktop">
+  <div class="demo">
+    <b>PulseMouse v0.9 · Context Pulse 效果图</b>
+    <span>光标所在程序</span><div class="seg" id="ctxSeg"></div>
+    <span>按住 <kbd>R</kbd> 当右键，<kbd>Space</kbd> 当左键敲节奏（≤300ms 点，≥500ms 划），松开 <kbd>R</kbd> 执行，滚轮取消</span>
+    <button id="fitBtn" data-act="fit">切换 100% 尺寸</button>
+  </div>
+
+  <div class="window" id="win">
+    <header class="titlebar" id="titlebar">
+      <div class="tb-id"><span class="logo"></span><span class="wordmark">PulseMouse</span><span class="ver">v0.9</span></div>
+      <div class="wc">
+        <button data-act="win-min" title="最小化"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><path d="M1 6h10"/></svg></button>
+        <button data-act="win-max" title="最大化 / 还原"><svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.2"><rect x="1.5" y="1.5" width="9" height="9" rx="1.5"/></svg></button>
+        <button class="close" data-act="win-close" title="隐藏到托盘"><svg width="12" height="12" viewBox="0 0 12 12" stroke="currentColor" stroke-width="1.2"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9"/></svg></button>
+      </div>
+    </header>
+    <div class="body">
+      <aside class="sidebar" id="sidebar"></aside>
+      <main class="main" id="main">
+        <section class="page" id="page-dashboard"></section>
+        <section class="page" id="page-commands"></section>
+        <section class="page" id="page-gestures"></section>
+        <section class="page" id="page-workflows"></section>
+        <section class="page" id="page-settings"></section>
+      </main>
+    </div>
+    <footer class="statusbar" id="statusbar"></footer>
+    <div class="toast" id="toast"></div>
+    <div class="modal-bg" id="modal"></div>
+  </div>
+
+  <div class="hintcard" id="hint"></div>
+  <div class="capsule" id="capsule">
+    <span class="orb" id="cap-orb"></span><span class="cp" id="cap-p"></span><span class="div"></span>
+    <span class="ct"><small id="cap-ctx"></small><span id="cap-t"></span></span>
+  </div>
+
+  <div class="taskbar" id="taskbar"></div>
+</div>
+
+<script>
+/* ============ icons ============ */
+const IC={
+  dashboard:'<rect x="3.5" y="3.5" width="7" height="7" rx="2"/><rect x="13.5" y="3.5" width="7" height="7" rx="2"/><rect x="3.5" y="13.5" width="7" height="7" rx="2"/><rect x="13.5" y="13.5" width="7" height="7" rx="2"/>',
+  commands:'<circle cx="5" cy="8" r="1.4"/><path d="M10 8h9"/><path d="M5 16h7"/><circle cx="17.5" cy="16" r="1.4"/>',
+  gestures:'<path d="M12 4v16M4 12h16"/><path d="M9.5 6.5L12 4l2.5 2.5M9.5 17.5L12 20l2.5-2.5M6.5 9.5L4 12l2.5 2.5M17.5 9.5L20 12l-2.5 2.5"/>',
+  workflows:'<rect x="3" y="4" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/><path d="M6.5 9v3.5a2 2 0 0 0 2 2H14"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.7 1.7 0 0 0 9 19.4a1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>',
+  search:'<circle cx="11" cy="11" r="6.5"/><path d="M20 20l-4.2-4.2"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  app:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.5"/><path d="M3.5 9h17"/>',
+  folder:'<path d="M3.5 7.5a2 2 0 0 1 2-2h4l2 2.5h7a2 2 0 0 1 2 2v7.5a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2z"/>',
+  url:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/>',
+  workflow:'<rect x="3" y="4" width="7" height="5" rx="1.5"/><rect x="14" y="15" width="7" height="5" rx="1.5"/><path d="M6.5 9v3.5a2 2 0 0 0 2 2H14"/>',
+  shortcut:'<rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6.5 10h.01M10 10h.01M13.5 10h.01M17 10h.01M7.5 14h9"/>',
+  repeat:'<path d="M17 2.5l3 3-3 3"/><path d="M4 11.5v-1a5 5 0 0 1 5-5h11"/><path d="M7 21.5l-3-3 3-3"/><path d="M20 12.5v1a5 5 0 0 1-5 5H4"/>',
+  globe:'<circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17M12 3.5c2.5 2.6 3.5 5.4 3.5 8.5s-1 5.9-3.5 8.5c-2.5-2.6-3.5-5.4-3.5-8.5s1-5.9 3.5-8.5z"/>',
+  target:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 1.5v3M12 19.5v3M1.5 12h3M19.5 12h3"/>',
+  lock:'<rect x="5" y="10.5" width="14" height="10" rx="2.5"/><path d="M8.5 10.5V8a3.5 3.5 0 0 1 7 0v2.5"/>',
+  swap:'<path d="M4 8h13l-3.5-3.5"/><path d="M20 16H7l3.5 3.5"/>',
+  map:'<rect x="3.5" y="4.5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M9 4.5v15"/>',
+  list:'<path d="M9 6.5h11M9 12h11M9 17.5h11"/><circle cx="4.5" cy="6.5" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="17.5" r="1"/>',
+  template:'<rect x="3.5" y="3.5" width="17" height="17" rx="2.5"/><path d="M3.5 9h17M9 9v11.5"/>',
+  copy:'<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  mouse:'<rect x="6.5" y="3" width="11" height="18" rx="5.5"/><path d="M12 7v4"/>',
+  back:'<path d="M9 5h11v14H9l-6-7z"/><path d="M12 9.5l5 5M17 9.5l-5 5"/>',
+  shield:'<path d="M12 3l7.5 3v5.5c0 4.5-3.2 8.2-7.5 9.5-4.3-1.3-7.5-5-7.5-9.5V6z"/>',
+  info:'<circle cx="12" cy="12" r="8.5"/><path d="M12 11v5M12 8h.01"/>',
+  dot:'<circle cx="12" cy="12" r="4" fill="currentColor"/>',
+  alert:'<path d="M12 4l9 16H3z"/><path d="M12 10v4M12 17h.01"/>',
+};
+const ic=(n,s=16)=>`<svg viewBox="0 0 24 24" width="${s}" height="${s}" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${IC[n]}</svg>`;
+
+/* ============ data ============ */
+const KINDS={app:{zh:'应用'},folder:{zh:'文件夹'},url:{zh:'网址'},shortcut:{zh:'快捷键'},workflow:{zh:'工作流'},repeat:{zh:'重复上一次'}};
+const APPS={
+  desktop:{n:'桌面',p:'explorer',c:'#6f7a84',l:'桌'},
+  chrome:{n:'Chrome',p:'chrome',c:'#3b8ff0',l:'C'},
+  excel:{n:'Excel',p:'excel',c:'#21a366',l:'X'},
+  feishu:{n:'飞书',p:'feishu',c:'#3370ff',l:'飞'},
+  code:{n:'VS Code',p:'code',c:'#2489ca',l:'V'},
+  msedge:{n:'Edge',p:'msedge',c:'#1fae9b',l:'E'},
+  wechat:{n:'微信',p:'Weixin',c:'#2aae67',l:'微'},
+};
+const av=(k,s=18)=>`<span class="av" style="--c:${APPS[k].c};width:${s}px;height:${s}px;font-size:${Math.round(s*.55)}px">${APPS[k].l}</span>`;
+/* actions whose effect does not depend on the app under the cursor */
+const SYSTEM_KEYS=new Set(['Alt+Tab','Win+Tab','Win+D','Shift+Win+S','Win+Shift+S','Win+L','Win+E','VolumeMute','VolumeUp','VolumeDown','MediaPlayPause','MediaNextTrack','MediaPrevTrack']);
+const autoPin=c=>c.kind!=='shortcut'||SYSTEM_KEYS.has(c.target);
+const ROUTES=[
+  {zh:'自动适配',d:'检测到侧键用侧键；否则用右键 + 左键和弦',active:'自动：右键 + 左键和弦',tag:'推荐'},
+  {zh:'右键 + 左键 · 和弦',d:'按住右键用左键敲节奏，松开右键立即执行',active:'右键 + 左键和弦'},
+  {zh:'X1 · 后退侧键',d:'按住侧键直接输入节奏',active:'X1 后退侧键'},
+  {zh:'X2 · 前进侧键',d:'按住侧键直接输入节奏',active:'X2 前进侧键'},
+  {zh:'中键长按 + 左键',d:'静止长按中键激活，7 秒内用左键输入',active:'中键长按 + 左键'},
+];
+const T={
+  nav:{dashboard:'仪表盘',commands:'指令库',gestures:'方向手势',workflows:'工作流',settings:'设置'},
+  en:{dashboard:'Dashboard',commands:'Commands',gestures:'Gestures',workflows:'Workflows',settings:'Settings'},
+  desc:{
+    dashboard:'实时观察节奏输入、当前程序与最近执行。',
+    commands:'全局定义默认含义；每个程序可以把非固定的节奏改成自己的含义。',
+    gestures:'按住中键向四个方向移动，松开后执行。',
+    workflows:'把多个本地动作串成一条节奏指令，执行前确认。',
+    settings:'行为、情境、节奏识别、Pulse Capsule、数据与备份。'},
+  no:{dashboard:'01',commands:'02',gestures:'03',workflows:'04',settings:'05'},
+};
+const PRESETS=[['复制','Ctrl+C'],['粘贴','Ctrl+V'],['撤销','Ctrl+Z'],['关闭标签','Ctrl+W'],['恢复标签','Ctrl+Shift+T'],['后退','Alt+Left'],['前进','Alt+Right'],['刷新','F5'],['切换窗口','Alt+Tab'],['截图','Shift+Win+S'],['静音','VolumeMute'],['播放/暂停','MediaPlayPause']];
+const TEMPLATE={name:'浏览器',apps:['chrome','msedge'],items:[
+  {name:'后退',pattern:'.-',target:'Alt+Left'},
+  {name:'刷新',pattern:'...',target:'F5'},
+  {name:'重新打开标签页',pattern:'.--',target:'Ctrl+Shift+T'},
+  {name:'前进',pattern:'-.',target:'Alt+Right'},
+  {name:'下一个标签页',pattern:'-..',target:'Ctrl+Tab'},
+  {name:'新标签页',pattern:'.',target:'Ctrl+T'},
+]};
+const h=(...a)=>a;
+const S={
+  page:'commands',enabled:true,route:0,ctx:'chrome',
+  commands:[
+    {id:1,name:'复制',pattern:'.',kind:'shortcut',target:'Ctrl+C',scope:'',heat:h(11,14,9,16,12,13,8),last:'10:12',lastApp:'code'},
+    {id:2,name:'粘贴',pattern:'..',kind:'shortcut',target:'Ctrl+V',scope:'',heat:h(10,13,9,15,11,12,7),last:'10:13',lastApp:'feishu'},
+    {id:3,name:'关闭标签页',pattern:'-',kind:'shortcut',target:'Ctrl+W',scope:'',heat:h(6,8,4,9,7,5,4),last:'10:05',lastApp:'chrome'},
+    {id:4,name:'截图',pattern:'--',kind:'shortcut',target:'Shift+Win+S',scope:'',heat:h(2,3,1,4,2,3,1),last:'09:51',lastApp:'feishu'},
+    {id:5,name:'切换窗口',pattern:'-.',kind:'shortcut',target:'Alt+Tab',scope:'',heat:h(5,7,6,8,6,7,3),last:'10:09',lastApp:'code'},
+    {id:6,name:'打开飞书',pattern:'.-.',kind:'app',target:'D:\\software\\Feishu\\Feishu.exe',scope:'',heat:h(1,0,1,0,0,1,0),last:'昨天',lastApp:'desktop'},
+    {id:7,name:'重复上一次',pattern:'..-',kind:'repeat',target:'',scope:'',heat:h(0,0,0,0,0,0,0),last:'',lastApp:''},
+    {id:8,name:'后退',pattern:'.-',kind:'shortcut',target:'Alt+Left',scope:'chrome',heat:h(4,6,5,7,5,6,3),last:'10:02',lastApp:'chrome',remind:0},
+    {id:9,name:'刷新',pattern:'...',kind:'shortcut',target:'F5',scope:'chrome',heat:h(3,2,4,3,2,3,2),last:'10:00',lastApp:'chrome',remind:0},
+    {id:10,name:'重新打开标签页',pattern:'.--',kind:'shortcut',target:'Ctrl+Shift+T',scope:'chrome',heat:h(1,2,1,3,2,1,1),last:'09:47',lastApp:'chrome',remind:0},
+    {id:11,name:'重复上一步',pattern:'-',kind:'shortcut',target:'F4',scope:'excel',heat:h(0,5,6,0,7,4,2),last:'09:30',lastApp:'excel',remind:3},
+    {id:12,name:'插入今天日期',pattern:'.-',kind:'shortcut',target:'Ctrl+;',scope:'excel',heat:h(0,1,2,0,1,1,0),last:'09:28',lastApp:'excel',remind:0},
+  ],
+  apps:['chrome','excel'],
+  set:{context:true,remind:true,showCtx:true,activate:true,shortMax:300,longMin:500,longMax:1600},
+  stats:{today:31,miss:2},
+  activity:[],log:[],
+  view:'map',cmdSel:11,cmdQuery:'',draft:null,
+  tpl:{app:'msedge',pick:{}},
+  last:null,savedAt:'10:13:20',
+};
+S.commands.forEach(c=>{if(!c.scope)c.pinned=autoPin(c)});
+let uid=20;
+S.activity=[
+  {t:'10:13:02',type:'ok',title:'粘贴',p:'..',kind:'shortcut',target:'Ctrl+V',ctx:'feishu',own:false},
+  {t:'10:12:40',type:'ok',title:'复制',p:'.',kind:'shortcut',target:'Ctrl+C',ctx:'code',own:false},
+  {t:'10:02:15',type:'ok',title:'后退',p:'.-',kind:'shortcut',target:'Alt+Left',ctx:'chrome',own:true},
+  {t:'09:58:31',type:'miss',title:'未找到匹配的指令',p:'-.-',ctx:'chrome'},
+  {t:'09:30:07',type:'ok',title:'重复上一步',p:'-',kind:'shortcut',target:'F4',ctx:'excel',own:true},
+];
+S.log=[
+  ['10:13:02.418','激活 飞书 窗口，发送 Ctrl+V','hit',''],
+  ['10:13:02.401','右键 松开','hit','[提交] ··'],
+  ['10:13:01.877','左键 释放，时长 104 ms → ·','hit','[节奏]'],
+  ['10:13:01.512','右键 按下 · 光标下：飞书','hit','[扣住] 等待左键'],
+  ['10:02:15.230','激活 Chrome 窗口，发送 Alt+Left','hit','[Chrome 含义]'],
+  ['09:12:44.006','Hook 安装成功；自动：右键 + 左键和弦','',''],
+];
+
+/* ============ helpers ============ */
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const hms=()=>new Date().toTimeString().slice(0,8);
+const hmsms=()=>{const d=new Date();return d.toTimeString().slice(0,8)+'.'+String(d.getMilliseconds()).padStart(3,'0')};
+const glyph=(p,cls='',on=-1)=>`<span class="glyph ${cls}">${[...(p||'')].map((c,i)=>`<i class="${c==='.'?'d':'l'}${i<on?' on':''}"></i>`).join('')}</span>`;
+const ptxt=p=>p.replace(/\./g,'·').replace(/-/g,'—');
+const tag=k=>`<span class="tag k-${k}">${ic(k,13)}${KINDS[k].zh}</span>`;
+const keys=t=>`<span class="keys">${String(t).split('+').map(k=>`<kbd>${esc(k)}</kbd>`).join('<em>+</em>')}</span>`;
+const targetPlain=c=>c.kind==='repeat'?'最近一次成功的动作':c.target;
+const targetHTML=c=>c.kind==='shortcut'?keys(c.target):c.kind==='repeat'?'<span>重复最近一次成功的动作</span>':`<span style="overflow:hidden;text-overflow:ellipsis">${esc(c.target)}</span>`;
+const sum=a=>a.reduce((x,y)=>x+y,0);
+const heatHTML=(hs,big)=>{const m=Math.max(1,...hs);return `<span class="heat ${big?'big':''}">${hs.map(v=>`<i class="${v?'':'zero'}" style="height:${v?Math.max(18,v/m*100):12}%"></i>`).join('')}</span>`};
+const DAYS=(()=>{const n=['日','一','二','三','四','五','六'],t=new Date().getDay();return Array.from({length:7},(_,i)=>i===6?'今天':'周'+n[(t-6+i+7)%7])})();
+const ALLP=(()=>{const out=[];let cur=[''];for(let l=1;l<=4;l++){cur=cur.flatMap(s=>[s+'.',s+'-']);out.push(...cur)}return out})();
+const pidx=p=>{const i=ALLP.indexOf(p);return i<0?999:i};
+let toastT;
+function toast(msg,icon='check'){const t=$('#toast');t.innerHTML=ic(icon,15)+esc(msg);t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2100)}
+function saved(){S.savedAt=hms();renderStatus()}
+function log(text,cls='',note=''){S.log.unshift([hmsms(),text,cls,note]);if(S.log.length>60)S.log.pop();const el=$('#log');if(el)el.innerHTML=logHTML()}
+function addActivity(a){S.activity.unshift({t:hms(),...a});if(S.activity.length>20)S.activity.pop();const el=$('#acts');if(el)el.innerHTML=actsHTML();const st=$('#st-today');if(st){st.textContent=S.stats.today;$('#st-today-s').textContent=`未匹配 ${S.stats.miss} 次`}}
+
+/* ============ two layers: global + per-app ============ */
+const globalOf=p=>S.commands.find(c=>!c.scope&&c.pattern===p);
+const ownOf=(app,p)=>S.commands.find(c=>c.scope===app&&c.pattern===p);
+const layerApps=()=>S.apps;
+const ensureApp=a=>{if(a&&!S.apps.includes(a))S.apps.push(a)};
+const ownCount=app=>S.set.context?S.commands.filter(c=>c.scope===app).length:0;
+function resolve(p,app){
+  const g=globalOf(p);
+  if(g&&g.pinned)return g;
+  if(S.set.context&&app){const a=ownOf(app,p);if(a)return a}
+  return g||null;
+}
+function available(app){
+  const pats=[...new Set(S.commands.filter(c=>!c.scope||(S.set.context&&c.scope===app)).map(c=>c.pattern))].sort((a,b)=>pidx(a)-pidx(b));
+  return pats.map(p=>resolve(p,app)).filter(Boolean);
+}
+function freePatterns(app,exclude=new Set(),n=3){
+  const out=[];
+  for(const p of ALLP){if(out.length>=n)break;if(exclude.has(p)||globalOf(p))continue;if(app&&ownOf(app,p))continue;if(!app&&S.commands.some(c=>c.pattern===p))continue;out.push(p)}
+  return out;
+}
+
+/* ============ shell ============ */
+function renderDemo(){
+  $('#ctxSeg').innerHTML=['desktop','chrome','excel','feishu'].map(k=>`<button class="${S.ctx===k?'on':''}" data-act="ctx" data-k="${k}">${av(k,16)}${APPS[k].n}</button>`).join('');
+  $('#taskbar').innerHTML=['desktop','chrome','excel','feishu','code'].map(k=>`<span class="tb-app ${S.ctx===k?'on':''}" data-act="ctx" data-k="${k}" title="把光标移到 ${APPS[k].n}">${av(k,22)}</span>`).join('')+
+    `<span class="tb-app" data-act="tray" title="PulseMouse"><span class="logo dark"></span></span>
+    <div class="tb-right"><button class="tray" data-act="tray" title="PulseMouse · 监听中"><span class="logo sm"></span></button><span class="clock"><span id="clock"></span><br>2026/10/14</span></div>`;
+  $('#clock').textContent=new Date().toTimeString().slice(0,5);
+}
+function setCtx(k){S.ctx=k;renderDemo();renderStatus();LV.key='';if(S.page==='commands'&&S.view==='map')$('#cmd-body').innerHTML=mapHTML()}
+function renderSidebar(){
+  const meta={dashboard:'',commands:S.commands.length,gestures:'2/4',workflows:'0',settings:''};
+  const item=k=>`<button class="nav-item ${S.page===k?'active':''}" data-act="nav" data-page="${k}">${ic(k,17)}<span>${T.nav[k]}</span><span class="meta">${meta[k]}</span></button>`;
+  $('#sidebar').innerHTML=`
+    <div class="nav-label">控制面</div>
+    <nav class="nav">${['dashboard','commands','gestures','workflows'].map(item).join('')}</nav>
+    <div class="nav-sep"></div>
+    <nav class="nav">${item('settings')}</nav>
+    <div class="engine">
+      <div class="engine-top"><span class="sdot ${S.enabled?'':'off'}"></span><b>${S.enabled?'监听中':'已暂停'}</b><button class="switch ${S.enabled?'on':''}" data-act="toggle-enabled" title="暂停 / 恢复监听"></button></div>
+      <div class="engine-sub">${ROUTES[S.route].active}<br>${S.set.context?`按程序切换含义 · ${layerApps().length} 个程序`:'按程序切换已关闭'}</div>
+    </div>`;
+}
+function renderStatus(){
+  const n=ownCount(S.ctx);
+  $('#statusbar').innerHTML=`
+    <span class="sb"><span class="sdot ${S.enabled?'':'off'}"></span>${S.enabled?'监听中':'监听已暂停，正常鼠标操作已恢复'}</span>
+    <span class="sb">${ic('mouse',13)}${ROUTES[S.route].active}</span>
+    <span class="sb">${ic('target',13)}光标下：${APPS[S.ctx].n}${n?` · ${n} 个节奏有专属含义`:' · 全部沿用全局'}</span>
+    <span class="sp"></span>
+    <span class="sb">${ic('check',13)}已保存 ${S.savedAt}</span>
+    <span class="sb">${ic('shield',13)}本地离线运行</span>`;
+}
+function pageHd(k,actions=''){
+  return `<header class="page-hd"><div><div class="eyebrow">${T.no[k]} · ${T.en[k]}</div><h1>${T.nav[k]}</h1><p>${T.desc[k]}</p></div><div class="page-actions">${actions}</div></header>`;
+}
+function go(p){
+  S.page=p;
+  document.querySelectorAll('.page').forEach(el=>el.classList.toggle('active',el.id==='page-'+p));
+  renderSidebar();renderPage();$('#main').scrollTop=0;
+}
+function renderPage(){({dashboard:renderDashboard,commands:renderCommands,gestures:renderGestures,workflows:renderWorkflows,settings:renderSettings})[S.page]()}
+
+/* ============ dashboard ============ */
+const scaleMax=()=>Math.max(1800,S.set.longMax+200);
+const pct=v=>Math.min(100,Math.max(0,v/scaleMax()*100)).toFixed(2)+'%';
+function rulerHTML(id){
+  const s=S.set;
+  return `<div class="ruler" id="${id}"><div class="rz">
+    <i class="z inv" style="left:0;width:${pct(35)}"></i><i class="z dot" style="left:${pct(35)};width:${pct(s.shortMax-35)}"></i>
+    <i class="z amb" style="left:${pct(s.shortMax)};width:${pct(s.longMin-s.shortMax)}"></i><i class="z dash" style="left:${pct(s.longMin)};width:${pct(s.longMax-s.longMin)}"></i>
+    <i class="z inv" style="left:${pct(s.longMax)};right:0"></i><b class="needle" id="${id}-n"><em id="${id}-v"></em></b></div>
+    <div class="rl"><span style="left:${pct((35+s.shortMax)/2)}">· 短按 ≤${s.shortMax}</span><span class="amb" style="left:${pct((s.shortMax+s.longMin)/2)}">无效</span><span style="left:${pct((s.longMin+s.longMax)/2)}">— 长按 ${s.longMin}–${s.longMax} ms</span></div></div>`;
+}
+function actsHTML(){
+  return S.activity.slice(0,5).map(a=>{
+    const icon=a.type==='ok'?ic(a.kind,15):a.type==='miss'?ic('x',15):ic('info',15);
+    const where=a.ctx?(a.own?`<span class="ctx">${av(a.ctx,14)}${APPS[a.ctx].n} 中的含义</span>`:`<span class="ctx">${ic('globe',13)}全局 · 在 ${APPS[a.ctx].n}</span>`):'';
+    let sub='';
+    if(a.type==='ok')sub=`${glyph(a.p)}${where}<span>·</span><span>${esc(a.target)}</span>`;
+    else if(a.type==='miss')sub=`${glyph(a.p)}${where}<span>· ${APPS[a.ctx].n} 中没有这个节奏</span>`;
+    return `<div class="act"><span class="ic ${a.type}">${icon}</span><div style="min-width:0"><div class="t">${esc(a.title)}</div><div class="s">${sub}</div></div><time>${a.t}</time></div>`;
+  }).join('');
+}
+function logHTML(){return S.log.map(([t,x,c,n])=>`<div><span class="tm">${t}</span> ${esc(x)} ${n?`<span class="${c}">${esc(n)}</span>`:''}</div>`).join('')}
+function renderDashboard(){
+  const glob=S.commands.filter(c=>!c.scope),pins=glob.filter(c=>c.pinned).length,reps=S.commands.filter(c=>c.scope&&globalOf(c.pattern)).length;
+  $('#page-dashboard').innerHTML=pageHd('dashboard',`<button class="btn" data-act="nav" data-page="commands">${ic('commands',15)}管理指令</button>`)+`
+  <div class="stats">
+    <div class="card stat"><div class="v" style="color:var(--mint)" id="st-today">${S.stats.today}</div><div class="l">今日执行</div><div class="s" id="st-today-s">未匹配 ${S.stats.miss} 次</div></div>
+    <div class="card stat"><div class="v" style="color:var(--blue)">${new Set(S.commands.map(c=>c.pattern)).size}</div><div class="l">在用的节奏</div><div class="s">${ic('lock',13)}${pins} 个固定 · ${glob.length-pins} 个可按程序改</div></div>
+    <div class="card stat"><div class="v">${layerApps().length}</div><div class="l">有专属含义的程序</div><div class="s">${ic('swap',13)}${reps} 处替换了全局含义</div></div>
+  </div>
+  <div class="dash-row">
+    <section class="card hero">
+      <div class="card-hd"><div><div class="eyebrow">Live pulse</div><h3>实时节奏</h3></div><div style="display:flex;gap:8px"><span class="ctxchip" id="hero-ctx"></span><span class="state" id="hero-chip"></span></div></div>
+      <div class="slots" id="slots"></div>
+      <div class="hero-state" id="hero-state"></div>
+      <div class="hero-sub" id="hero-sub"></div>
+      ${rulerHTML('hr')}
+      <div class="holdbar"><span>按住右键</span><div class="hold-track"><i id="hold-fill"></i></div><span>8 s 未敲按长按放行</span></div>
+      <div class="cands" id="cands"></div>
+      <div class="hero-ft"><span class="hint">${ic('target',13)}按「按下右键那一刻光标下的程序」决定含义；快捷键会先激活那个窗口再发送</span></div>
+    </section>
+    <section class="card">
+      <div class="card-hd"><div><div class="eyebrow">Input route</div><h3>输入方式</h3></div></div>
+      <div class="radio-list">${ROUTES.map((r,i)=>`<button class="radio ${S.route===i?'on':''}" data-act="route" data-i="${i}"><span class="rd"></span><span><b>${r.zh}${r.tag?` <span class="tag k-muted" style="height:18px;margin-left:4px">${r.tag}</span>`:''}</b><small>${r.d}</small></span></button>`).join('')}</div>
+    </section>
+  </div>
+  <div class="dash-row2">
+    <section class="card"><div class="card-hd"><div><div class="eyebrow">Recent runs</div><h3>最近执行</h3></div><button class="btn sm ghost" data-act="nav" data-page="commands">查看指令库</button></div><div id="acts">${actsHTML()}</div></section>
+    <section class="card"><div class="card-hd"><div><div class="eyebrow">Diagnostics</div><h3>诊断日志</h3></div><button class="btn sm ghost" data-act="copy-log">${ic('copy',14)}复制</button></div><div class="log" id="log">${logHTML()}</div></section>
+  </div>`;
+  LV.key='';
+}
+const LV={key:''};
+function updateLive(now){
+  if(S.page!=='dashboard'||!$('#slots'))return;
+  const ctx=CH.down!=null?CH.ctx:S.ctx,pressing=CH.pDown!=null,seq=CH.seq;
+  const key=[seq,pressing,CH.phase,CH.down!=null,S.enabled,ctx,S.set.context,CH.msg].join('|');
+  if(key!==LV.key){
+    LV.key=key;
+    let slots='';
+    for(let i=0;i<5;i++){
+      const ch=seq[i];
+      let cls=ch?'filled':(pressing&&i===seq.length)?'pressing':(CH.down!=null&&i===seq.length)?'next':'',inner=ch?glyph(ch,'lg'):'';
+      if(CH.phase==='miss'&&CH.hit&&CH.hit.pat[i]){cls='miss';inner=glyph(CH.hit.pat[i],'lg')}
+      if(CH.phase==='matched'&&CH.hit&&CH.hit.pat[i]){cls='filled';inner=glyph(CH.hit.pat[i],'lg')}
+      slots+=`<span class="slot ${cls}">${inner}</span>`;
+    }
+    $('#slots').innerHTML=slots;
+    const own=ownCount(ctx);
+    $('#hero-ctx').innerHTML=`${av(ctx,18)}光标在 <b>${APPS[ctx].n}</b>${own?` · ${own} 个专属含义`:''}`;
+    let chip=['','待命'],st='等待输入',sub='按住右键，用左键敲节奏；松开右键立即执行';
+    if(!S.enabled){chip=['','已暂停'];st='监听已暂停';sub='正常鼠标操作已恢复'}
+    else if(CH.phase==='hold'){chip=['live','右键已扣住'];st='等待左键';sub='不敲直接松开 = 普通右键单击'}
+    else if(CH.phase==='press'){chip=['live','按住中'];st=`第 ${seq.length+1} 位 · 正在计时`;sub='松开左键后按时长判定为 · 或 —'}
+    else if(CH.phase==='typing'){const m=resolve(seq,ctx);chip=['live','输入中'];st=`已输入 ${seq.length} 位`;sub=m?`松开右键执行「${m.name}」${m.scope?`（${APPS[ctx].n} 中的含义）`:m.pinned?'（固定）':''}；滚轮取消`:'继续敲，或松开右键（当前没有完全匹配）'}
+    else if(CH.phase==='matched'){const c=CH.hit.c;chip=['live','已执行'];st=`${ic('check',18)} ${esc(CH.hit.label||c.name)}`;sub=`${c.scope?APPS[c.scope].n+' 中的含义':c.pinned?'全局 · 固定':'全局'} · ${KINDS[c.kind].zh} · ${targetPlain(c)}`}
+    else if(CH.phase==='miss'){chip=['bad','未匹配'];st='未找到匹配的指令';sub=`${APPS[ctx].n} 中没有 ${ptxt(CH.hit.pat)}，可以在指令库中绑定`}
+    else if(CH.phase==='reset'){chip=['bad','已作废'];st='本次输入无效';sub=CH.msg}
+    else if(CH.phase==='cancel'){chip=['bad','已取消'];st='已取消本次输入';sub='松开右键不会执行任何动作'}
+    $('#hero-chip').className='state '+chip[0];$('#hero-chip').innerHTML=`<i></i>${chip[1]}`;
+    $('#hero-state').innerHTML=st;$('#hero-sub').textContent=sub;
+    const list=available(ctx).filter(c=>c.pattern.startsWith(seq));
+    $('#cands').innerHTML=`<span>${av(ctx,15)}${seq?'匹配候选':APPS[ctx].n+' 中可用'}</span>`+(list.length?list.map(c=>`<span class="cand ${c.scope?'own':''} ${seq?'hit':''} ${seq&&c.pattern===seq?'exact':''}">${glyph(c.pattern)}${esc(c.name)}${c.scope?av(c.scope,14):c.pinned?`<span class="lockic">${ic('lock',11)}</span>`:''}</span>`).join(''):`<span class="cand">没有以此开头的节奏</span>`);
+  }
+  const n=$('#hr-n'),v=$('#hr-v'),s=S.set;
+  if(pressing){const d=now-CH.pDown;n.classList.add('on');n.style.left=pct(d);v.textContent=Math.round(d)+' ms';n.style.background=d<=s.shortMax?'var(--mint)':d<s.longMin||d>s.longMax?'var(--coral)':'var(--blue)'}
+  else if(CH.lastDur!=null){n.classList.add('on');n.style.left=pct(CH.lastDur);v.textContent=Math.round(CH.lastDur)+' ms → '+(CH.lastPulse==='.'?'·':CH.lastPulse==='-'?'—':'无效')}
+  else n.classList.remove('on');
+  $('#hold-fill').style.width=CH.down!=null&&!seq&&!pressing?Math.min(100,(now-CH.down)/8000*100)+'%':'0%';
+}
+function loop(){updateLive(performance.now());requestAnimationFrame(loop)}
+
+/* ============ chord simulation (R = right button, Space = left button) ============ */
+const CH={down:null,pDown:null,seq:'',ctx:null,phase:'idle',lastDur:null,lastPulse:null,hit:null,msg:'',armT:null,hintT:null,idleT:null};
+function chordDown(){
+  if(!S.enabled){toast('监听已暂停','info');return}
+  if(CH.down!=null)return;
+  clearTimeout(CH.idleT);
+  Object.assign(CH,{down:performance.now(),pDown:null,seq:'',ctx:S.ctx,phase:'hold',hit:null,lastDur:null,msg:''});
+  log(`右键 按下 · 光标下：${APPS[CH.ctx].n}`,'hit','[扣住] 等待左键');
+  CH.armT=setTimeout(()=>{if(CH.down!=null&&!CH.seq&&CH.pDown==null){capsule('armed','','用左键敲节奏；不敲直接松开即普通右键');showHint('')}},600);
+}
+function pulseDown(){
+  if(CH.down==null){toast('先按住 R（模拟右键），再用 Space 敲节奏','info');return}
+  if(CH.pDown!=null||CH.phase==='cancel')return;
+  CH.pDown=performance.now();CH.phase='press';clearTimeout(CH.hintT);clearTimeout(CH.armT);hideHint();
+  if(!CH.seq)capsule('typing','','正在输入…');
+}
+function pulseUp(){
+  if(CH.pDown==null)return;
+  const d=performance.now()-CH.pDown,s=S.set;CH.pDown=null;CH.lastDur=d;
+  const p=d<35||d>s.longMax?null:d<=s.shortMax?'.':d>=s.longMin?'-':null;
+  if(!p){CH.lastPulse='x';CH.seq='';CH.phase='reset';CH.msg=`左键按住 ${Math.round(d)} ms 无法判定（${s.shortMax}–${s.longMin} ms 之间或过长），本次作废`;capsule('failed','','无法判定的按压，已作废');log(CH.msg,'err','');return}
+  CH.lastPulse=p;CH.seq+=p;CH.phase='typing';
+  const m=resolve(CH.seq,CH.ctx);
+  capsule('typing',CH.seq,m?m.name:'正在输入…',m);
+  log(`左键 释放，时长 ${Math.round(d)} ms → ${p==='.'?'·':'—'}`,'hit','[节奏]');
+  CH.hintT=setTimeout(()=>{if(CH.down!=null&&CH.pDown==null&&CH.phase==='typing')showHint(CH.seq)},600);
+}
+function chordUp(){
+  if(CH.down==null)return;
+  clearTimeout(CH.armT);clearTimeout(CH.hintT);hideHint();
+  const seq=CH.seq,phase=CH.phase;CH.down=null;CH.pDown=null;CH.seq='';
+  if(phase==='cancel'||phase==='reset'){idleLater();return}
+  if(!seq){hideCapsule();CH.phase='idle';log('右键 松开','pass','[补发] 没有节奏，补发右键单击');toast('普通右键：已补发右键单击，右键菜单照常弹出','info');return}
+  log('右键 松开','hit',`[提交] ${ptxt(seq)}`);
+  const c=resolve(seq,CH.ctx);
+  if(c){CH.phase='matched';CH.hit={c,pat:seq};run(c,seq,CH.ctx)}
+  else{CH.phase='miss';CH.hit={pat:seq};S.stats.miss++;capsule('failed',seq,'未找到匹配的指令');addActivity({type:'miss',title:'未找到匹配的指令',p:seq,ctx:CH.ctx});log(`${APPS[CH.ctx].n} 中没有匹配的指令：${seq}`,'err','')}
+  idleLater();
+}
+function chordCancel(){
+  if(CH.down==null||CH.phase==='cancel')return;
+  CH.phase='cancel';CH.seq='';CH.pDown=null;clearTimeout(CH.hintT);clearTimeout(CH.armT);hideHint();
+  capsule('failed','','已取消，松开右键不会执行');log('滚轮：已取消本次输入','pass','');
+}
+function idleLater(){clearTimeout(CH.idleT);CH.idleT=setTimeout(()=>{if(CH.down==null){CH.phase='idle';CH.lastDur=null}},3200)}
+function run(c,seq,ctx){
+  if(c.kind==='repeat'){
+    if(!S.last){CH.phase='miss';CH.hit={pat:seq};capsule('failed',seq,'还没有可重复的动作',c);log('重复上一次：还没有成功执行过的动作','err','');return}
+    CH.hit.label=`重复：${S.last.c.name}`;
+    return execute(S.last.c,seq,S.last.ctx,`重复：${S.last.c.name}`,c);
+  }
+  execute(c,seq,ctx);
+}
+function execute(c,seq,ctx,label,via){
+  const name=label||c.name,shown=via||c;
+  capsule('typing',seq,`${name} · 正在执行`,shown,ctx);
+  setTimeout(()=>{
+    S.stats.today++;c.heat[6]++;c.last=hms().slice(0,5);c.lastApp=ctx;
+    if(via)via.heat[6]++;
+    if(c.kind!=='workflow')S.last={c,ctx};
+    if(c.kind==='shortcut')log(S.set.activate&&ctx!=='desktop'?`激活 ${APPS[ctx].n} 窗口，发送 ${c.target}`:`发送 ${c.target}`,'hit',c.scope?`[${APPS[c.scope].n} 含义]`:'');
+    else log(`已请求执行：${c.name}`,'hit','');
+    addActivity({type:'ok',title:name,p:seq,kind:c.kind,target:targetPlain(c),ctx,own:!!c.scope});
+    capsule('matched',seq,`${name} · 已发起`,shown,ctx);
+    if(shown.scope&&shown.remind>0)shown.remind--;
+    if(S.page==='commands')$('#cmd-body').innerHTML=S.view==='map'?mapHTML():listHTML();
+  },320);
+}
+
+/* ============ capsule + hint card ============ */
+let capT;
+function capLabel(cmd,ctx){
+  if(!S.set.showCtx)return ['PULSE CAPSULE',false];
+  if(!cmd){const own=ownCount(ctx);return [`${av(ctx,14)}<b>${APPS[ctx].n}</b>${own?`${own} 个节奏有专属含义`:'全部沿用全局'}`,false]}
+  if(cmd.scope){
+    const g=globalOf(cmd.pattern);
+    if(g&&S.set.remind&&cmd.remind>0)return [`${av(ctx,14)}<b>${APPS[ctx].n} 中 ${ptxt(cmd.pattern)} 是新含义</b>· 全局是「${esc(g.name)}」`,true];
+    return [`${av(ctx,14)}<b>${APPS[ctx].n}</b>中的含义`,false];
+  }
+  return [`${ic(cmd.pinned?'lock':'globe',12)}<b>全局</b>${cmd.pinned?'固定':''}${ctx&&ctx!=='desktop'?` · 在 ${APPS[ctx].n}`:''}`,false];
+}
+function capsule(mode,pat,text,cmd,ctxArg){
+  const el=$('#capsule'),ctx=ctxArg||CH.ctx||S.ctx,[label,remind]=capLabel(cmd,ctx);
+  el.className=`capsule show ${mode==='failed'?'failed':''} ${mode==='armed'||mode==='typing'?'breath':''} ${remind&&mode!=='failed'?'remind':''}`;
+  $('#cap-orb').innerHTML=mode==='matched'?ic('check',18):mode==='failed'?ic('x',18):ic(mode==='armed'?'dot':'mouse',18);
+  $('#cap-p').innerHTML=pat?glyph(pat,'md'):'';$('#cap-p').style.display=pat?'flex':'none';
+  $('#cap-ctx').innerHTML=label;$('#cap-t').textContent=text;
+  clearTimeout(capT);
+  if(mode==='matched'||mode==='failed')capT=setTimeout(hideCapsule,mode==='failed'?1700:remind?2200:1400);
+}
+function hideCapsule(){$('#capsule').classList.remove('show','breath')}
+function showHint(prefix){
+  const ctx=CH.ctx,list=available(ctx).filter(c=>c.pattern.startsWith(prefix)),shown=list.slice(0,6);
+  const em=c=>{if(c.scope){const g=globalOf(c.pattern);return g?`<em class="rep">${av(c.scope,13)}替换「${esc(g.name)}」</em>`:`<em>${av(c.scope,13)}专属</em>`}return c.pinned?`<em>${ic('lock',11)}固定</em>`:'<em></em>'};
+  $('#hint').innerHTML=`<div class="hint-hd">${av(ctx,16)}<b>${APPS[ctx].n} 中可用</b><span>${prefix?'接着敲，或松开右键':'松开右键执行 · 滚轮取消'}</span></div>`+
+    (shown.length?shown.map(c=>`<div class="hrow ${prefix&&c.pattern===prefix?'exact':''}">${glyph(c.pattern,'md',prefix.length)}<span>${esc(c.name)}</span>${em(c)}</div>`).join(''):'<div class="hrow none">没有以此开头的节奏，松开右键会记为未匹配</div>')+
+    (list.length>6?`<div class="hmore">另有 ${list.length-6} 条</div>`:'');
+  $('#hint').classList.add('show');
+}
+function hideHint(){$('#hint').classList.remove('show')}
+
+/* ============ commands: rhythm map ============ */
+function selectCmd(id,scope,pattern){
+  S.cmdSel=id;const c=S.commands.find(x=>x.id===id);
+  S.draft=c?clone(c):{id:null,name:'',pattern:pattern||'',kind:'shortcut',target:'',scope:scope||'',heat:[0,0,0,0,0,0,0],pinned:false,remind:5};
+}
+function isSel(scope,p){const d=S.draft;return d&&(d.id?S.cmdSel===d.id&&(d.scope||'')===scope&&S.commands.find(c=>c.id===d.id).pattern===p:!d.id&&(d.scope||'')===scope&&d.pattern===p)}
+function mapHTML(){
+  const apps=layerApps(),cols=1+apps.length;
+  const pats=[...new Set([...ALLP.slice(0,6),...S.commands.map(c=>c.pattern)])].sort((a,b)=>pidx(a)-pidx(b));
+  const here=a=>S.ctx===a?`<span class="here"><i></i>光标</span>`:'';
+  const hd=`<div class="mrow mhd" style="--cols:${cols}"><div>节奏</div><div>${ic('globe',14)}全局<span class="sp"></span>${!apps.includes(S.ctx)?here(S.ctx):''}</div>${apps.map(a=>`<div>${av(a,16)}${APPS[a].n}<span class="sp"></span>${here(a)}<button class="colx" data-act="app-remove" data-k="${a}" title="移除 ${APPS[a].n}">${ic('x',12)}</button></div>`).join('')}</div>`;
+  const off=S.set.context?'':`<div class="mapoff">${ic('info',13)}「按程序切换含义」已关闭：所有程序暂时只用全局含义，下面的程序含义保留但不生效</div>`;
+  const rows=pats.map(p=>{
+    const g=globalOf(p),pinned=g&&g.pinned;
+    const gcell=g?`<button class="cell ${isSel('',p)?'sel':''}" data-act="cell" data-s="" data-p="${p}"><span class="cn">${pinned?`<span class="lockic">${ic('lock',12)}</span>`:''}${esc(g.name)}<span class="cnt">${sum(g.heat)}</span></span><span class="cs">${targetHTML(g)}</span></button>`
+      :`<button class="cell free ${isSel('',p)?'sel':''}" data-act="cell" data-s="" data-p="${p}"><span class="cn">${ic('plus',12)}空闲</span><span class="cs">点击绑定全局含义</span></button>`;
+    const acells=apps.map(a=>{
+      const o=ownOf(a,p),cls=S.ctx===a?'here':'';
+      if(o)return `<button class="cell own ${g?'rep':''} ${cls} ${isSel(a,p)?'sel':''}" data-act="cell" data-s="${a}" data-p="${p}"><span class="cn">${esc(o.name)}<span class="cnt">${sum(o.heat)}</span></span><span class="cs">${g?`替换「${esc(g.name)}」`:targetHTML(o)}</span></button>`;
+      if(pinned)return `<button class="cell lock ${cls}" data-act="cell-lock" data-p="${p}" title="「${esc(g.name)}」已固定"><span class="cn">${ic('lock',12)}固定</span><span class="cs">${esc(g.name)}</span></button>`;
+      if(g)return `<button class="cell inh ${cls} ${isSel(a,p)?'sel':''}" data-act="cell" data-s="${a}" data-p="${p}"><span class="cn">沿用 · ${esc(g.name)}</span><span class="cs">点击改成 ${APPS[a].n} 的含义</span></button>`;
+      return `<button class="cell free ${cls} ${isSel(a,p)?'sel':''}" data-act="cell" data-s="${a}" data-p="${p}"><span class="cn">—</span><span class="cs"></span></button>`;
+    }).join('');
+    return `<div class="mrow ${pinned?'pinned':''}" style="--cols:${cols}"><div class="mp">${glyph(p,'md')}</div>${gcell}${acells}</div>`;
+  }).join('');
+  return `${off}<div class="map ${S.set.context?'':'off'}">${hd}${rows}</div>`;
+}
+function itemHTML(c){
+  const g=c.scope?globalOf(c.pattern):null,reps=!c.scope?S.commands.filter(x=>x.scope&&x.pattern===c.pattern):[];
+  const extra=g?`<span class="rep-chip">${ic('swap',11)}替换全局「${esc(g.name)}」</span>`:reps.length?`<span class="muted-chip">${ic('swap',11)}在 ${reps.map(o=>APPS[o.scope].n).join('、')} 中被替换</span>`:'';
+  const total=sum(c.heat);
+  return `<button class="item ${S.cmdSel===c.id?'sel':''}" data-act="cmd-sel" data-id="${c.id}"><span class="pchip">${glyph(c.pattern,'md')}</span>
+    <span style="min-width:0"><span class="n">${c.pinned?`<span class="lockic">${ic('lock',13)}</span>`:''}${esc(c.name)}</span><span class="tg">${targetHTML(c)}${extra}</span></span>
+    <span class="right">${tag(c.kind)}<span class="use ${total?'':'cold'}" title="最近 7 天">${heatHTML(c.heat)}${total?total+' 次':'7 天未用'}</span></span></button>`;
+}
+function listHTML(){
+  const q=S.cmdQuery.trim().toLowerCase(),qp=q.replace(/·/g,'.').replace(/—/g,'-');
+  const match=c=>!q||c.name.toLowerCase().includes(q)||targetPlain(c).toLowerCase().includes(q)||(/^[.\-]+$/.test(qp)&&c.pattern.startsWith(qp));
+  let html='';
+  for(const g of ['',...layerApps()]){
+    const items=S.commands.filter(c=>(c.scope||'')===g&&match(c)).sort((a,b)=>pidx(a.pattern)-pidx(b.pattern));
+    if(!items.length&&(q||!g))continue;
+    html+=g?`<div class="grp">${av(g,18)}<b>${APPS[g].n}</b><span>${APPS[g].p}.exe · 光标在这个程序上时使用</span><span class="sp"></span><button class="btn xs" data-act="app-remove" data-k="${g}">${ic('x',12)}移除</button></div>`:`<div class="grp">${ic('globe',15)}<b>全局</b><span>默认含义；${ic('lock',11)} 固定的在所有程序中不变</span></div>`;
+    html+=items.length?`<div class="list">${items.map(itemHTML).join('')}</div>`:`<div class="empty">${APPS[g].n} 还没有自己的含义，全部沿用全局</div>`;
+  }
+  return html||`<div class="empty">没有符合条件的指令</div>`;
+}
+function patMsg(d){
+  const p=d.pattern;
+  if(!p)return ['muted','info','点击添加短按 · 或长按 —，最多 5 位',[]];
+  if(d.scope){
+    const app=APPS[d.scope].n,same=S.commands.find(c=>c.id!==d.id&&c.scope===d.scope&&c.pattern===p),g=globalOf(p);
+    if(same)return ['err','alert',`${app} 中这个节奏已经是「${same.name}」`,freePatterns(d.scope)];
+    if(g&&g.pinned)return ['err','lock',`「${g.name}」已固定，在所有程序中保持不变`,freePatterns(d.scope)];
+    if(g)return ['warn','swap',`在 ${app} 中替换全局「${g.name}」；其他程序不受影响`,[]];
+    return ['ok','check',`${app} 中可用；其他程序里这个节奏没有含义`,[]];
+  }
+  const same=S.commands.find(c=>c.id!==d.id&&!c.scope&&c.pattern===p);
+  if(same)return ['err','alert',`已被全局「${same.name}」占用`,freePatterns('')];
+  const reps=S.commands.filter(c=>c.scope&&c.pattern===p);
+  if(reps.length&&d.pinned)return ['err','lock',`${reps.map(o=>`${APPS[o.scope].n} 中是「${o.name}」`).join('、')}；要固定需先移除这些程序含义`,[]];
+  return reps.length?['ok','check',`可用；${reps.map(o=>`${APPS[o.scope].n} 中是「${o.name}」`).join('、')}`,[]]:['ok','check','节奏可用',[]];
+}
+function composerHTML(d){
+  const m=patMsg(d);
+  let slots='';for(let i=0;i<5;i++)slots+=d.pattern[i]?`<span class="cslot filled ${m[0]==='err'?'err':m[0]==='warn'?'warn':''}">${glyph(d.pattern[i],'md')}</span>`:'<span class="cslot"></span>';
+  return `<div class="composer" id="comp"><div class="cslots">${slots}</div>
+    <div class="cbtns"><button class="btn sm" data-act="pat-add" data-c=".">${glyph('.')}短按</button><button class="btn sm" data-act="pat-add" data-c="-">${glyph('-')}长按</button><span class="sp"></span>
+    <button class="btn sm icon ghost" data-act="pat-back" title="退格">${ic('back',15)}</button><button class="btn sm ghost" data-act="pat-clear">清空</button></div>
+    <div class="cmsg ${m[0]}">${ic(m[1],13)}<span>${esc(m[2])}</span></div>
+    ${m[3].length?`<div class="sugg">可改用 ${m[3].map(p=>`<button class="btn xs" data-act="pat-set" data-p="${p}">${glyph(p)}</button>`).join('')}</div>`:''}</div>`;
+}
+function targetBody(d){
+  if(d.kind==='shortcut')return `<div class="field"><label>快捷键</label>
+    <div class="keycap" tabindex="0" id="keycap">${d.target?keys(d.target):'<span class="ph">点这里，然后按下组合键</span>'}</div>
+    <div class="presets">${PRESETS.map(([n,k])=>`<button class="btn xs" data-act="preset" data-k="${k}">${n}</button>`).join('')}</div>
+    <div class="fhint">${ic('target',13)}发送前先激活光标下的窗口${d.scope?`（${APPS[d.scope].n}）`:''}，再按下组合键</div></div>`;
+  if(d.kind==='repeat')return `<div class="note" style="margin-bottom:15px">${ic('repeat',15)}<div>重复最近一次成功执行的动作，作用于当时的窗口。<br>不会重复工作流，也不会重复自己。${S.last?`<br>当前会重复：<b style="color:var(--text)">${esc(S.last.c.name)}</b>（${APPS[S.last.ctx].n}）`:''}</div></div>`;
+  if(d.kind==='workflow')return `<div class="note" style="margin-bottom:15px">${ic('workflow',15)}<div>工作流的步骤在「工作流」页编辑。</div></div>`;
+  const cfg={app:['程序','notepad.exe 或 C:\\…\\app.exe','支持 .exe / .lnk，可使用 %环境变量%'],folder:['文件夹','D:\\Projects','打开前会检查目录是否存在'],url:['网址','https://','仅支持 http:// 或 https://']}[d.kind];
+  return `<div class="field"><label>${cfg[0]}</label><div class="input-row"><input class="input mono" data-bind="target" value="${esc(d.target)}" placeholder="${esc(cfg[1])}">${d.kind!=='url'?'<button class="btn">浏览…</button>':''}</div><div class="fhint">${cfg[2]}</div></div>`;
+}
+function cmdInspectorHTML(){
+  const d=S.draft,total=sum(d.heat);
+  const scopeField=`<div class="field"><label>在哪里生效</label>
+    <div class="seg full"><button class="${!d.scope?'on':''}" data-act="d-scope" data-k="">${ic('globe',14)}全局</button><button class="${d.scope?'on':''}" data-act="d-scope" data-k="${d.scope||S.ctx!=='desktop'&&S.ctx||'chrome'}">${ic('target',14)}指定程序</button></div>
+    ${d.scope?`<div class="apps">${[...new Set([...S.apps,d.scope,'feishu','code'])].map(a=>`<button class="appchip ${d.scope===a?'on':''}" data-act="d-scope" data-k="${a}">${av(a,18)}${APPS[a].n}</button>`).join('')}<button class="appchip ghost" data-act="pick-window">${ic('target',14)}拾取窗口</button></div>
+    <div class="fhint">光标在 ${APPS[d.scope].n}（${APPS[d.scope].p}.exe）上时使用这个含义</div>`:''}</div>`;
+  let layerField='';
+  if(!d.scope){
+    const reps=S.commands.filter(c=>c.scope&&c.pattern===d.pattern&&d.pattern);
+    layerField=`<div class="field"><label>在各程序中</label>
+      <div class="pinrow ${d.pinned?'on':''}"><span class="pi">${ic('lock',15)}</span><div style="flex:1"><b>固定：在所有程序中保持不变</b><small>${autoPin(d)?'系统级动作，已自动固定；程序里不能改这个节奏':'作用在当前程序里的动作，默认允许各程序改成自己的含义'}</small></div><button class="switch ${d.pinned?'on':''}" data-act="pin-toggle"></button></div>
+      ${!d.pinned?`<div class="where">${reps.length?reps.map(o=>`<div>${av(o.scope,16)}${APPS[o.scope].n} 中是「${esc(o.name)}」<span class="sp"></span>${keys(o.target)}</div>`).join(''):`<div>${ic('check',13)}所有程序都沿用这个含义</div>`}</div>`:''}</div>`;
+  }
+  const usage=d.id?`<div class="field usage"><label>最近 7 天 <span>${total} 次${d.last?` · 上次 ${d.last}${d.lastApp?' 在 '+APPS[d.lastApp].n:''}`:''}</span></label>${heatHTML(d.heat,true)}<div class="days">${DAYS.map((x,i)=>`<span class="${i===6?'today':''}">${x}</span>`).join('')}</div></div>`:'';
+  const badge=d.scope?`<span class="ctxchip">${av(d.scope,18)}${APPS[d.scope].n} 中的含义</span>`:`<span class="ctxchip" style="padding-left:9px">${ic(d.pinned?'lock':'globe',13)}全局${d.pinned?' · 固定':''}</span>`;
+  return `<div class="insp-hd"><div><div class="eyebrow">${d.id?'Edit command':'New command'}</div><h3>${d.id?esc(d.name):'新建指令'}</h3></div>${badge}</div>
+  <div class="insp-bd">
+    <div class="field"><label>名称</label><input class="input" data-bind="name" value="${esc(d.name)}" placeholder="例如：刷新"></div>
+    ${scopeField}
+    <div class="field"><label>节奏 <span id="plen">${d.pattern.length} / 5</span></label>${composerHTML(d)}</div>
+    <div class="field"><label>动作类型</label><div class="seg grid3">${Object.keys(KINDS).map(k=>`<button class="${d.kind===k?'on':''}" data-act="kind" data-k="${k}">${ic(k,14)}${KINDS[k].zh}</button>`).join('')}</div></div>
+    ${targetBody(d)}
+    ${layerField}
+    ${usage}
+  </div>
+  <div class="insp-ft">${d.id?`<button class="btn danger" data-act="cmd-del">${ic('trash',14)}${d.scope?(globalOf(d.pattern)?'恢复为全局含义':'移除'):'删除'}</button>`:''}<span class="sp"></span><button class="btn primary" data-act="cmd-save">保存</button></div>`;
+}
+function renderCommands(){
+  if(!S.draft)selectCmd(S.cmdSel);
+  const tools=S.view==='map'
+    ?`<div class="legend"><span><i style="background:rgba(81,230,202,.5)"></i>程序专属</span><span><i style="background:rgba(233,196,106,.6)"></i>替换了全局</span><span>${ic('lock',12)}固定</span><button class="btn xs" data-act="app-add">${ic('plus',13)}添加程序</button></div>`
+    :`<div class="search">${ic('search',15)}<input class="input" id="cmd-q" placeholder="搜索名称、快捷键或节奏" value="${esc(S.cmdQuery)}"></div>`;
+  $('#page-commands').innerHTML=pageHd('commands',`<button class="btn" data-act="tpl-open">${ic('template',15)}从模板添加</button><button class="btn primary" data-act="cmd-new">${ic('plus',15)}新建指令</button>`)+`
+  <div class="split"><div>
+    <div class="toolbar"><div class="seg"><button class="${S.view==='map'?'on':''}" data-act="view" data-k="map">${ic('map',14)}节奏地图</button><button class="${S.view==='list'?'on':''}" data-act="view" data-k="list">${ic('list',14)}列表</button></div>${tools}</div>
+    <div id="cmd-body">${S.view==='map'?mapHTML():listHTML()}</div>
+  </div><aside class="card inspector" id="cmd-insp">${cmdInspectorHTML()}</aside></div>`;
+}
+function refreshCommands(){$('#cmd-body').innerHTML=S.view==='map'?mapHTML():listHTML();$('#cmd-insp').innerHTML=cmdInspectorHTML()}
+function refreshComposer(){$('#comp').outerHTML=composerHTML(S.draft);$('#plen').textContent=S.draft.pattern.length+' / 5'}
+function saveCmd(){
+  const d=S.draft;
+  if(!d.name.trim())return toast('请填写名称','alert');
+  if(!d.pattern)return toast('请添加 1–5 位节奏','alert');
+  const m=patMsg(d);if(m[0]==='err')return toast(m[2],'alert');
+  if(d.kind==='shortcut'&&!d.target)return toast('请录入快捷键','alert');
+  if(['app','folder','url'].includes(d.kind)&&!String(d.target).trim())return toast('目标不能为空','alert');
+  if(!d.scope&&!d.pinManual)d.pinned=autoPin(d);
+  if(d.scope){delete d.pinned;ensureApp(d.scope);if(globalOf(d.pattern)&&d.remind==null)d.remind=5}
+  if(d.id){const i=S.commands.findIndex(c=>c.id===d.id);S.commands[i]=clone(d)}else{d.id=++uid;S.commands.push(clone(d))}
+  S.cmdSel=d.id;saved();toast(`已保存「${d.name}」${d.scope?`（${APPS[d.scope].n} 中的含义）`:''}`);renderSidebar();renderCommands();
+}
+
+/* ============ template modal ============ */
+function tplRows(){
+  const app=S.tpl.app;
+  const rows=TEMPLATE.items.map((it,i)=>{
+    const exist=ownOf(app,it.pattern),g=globalOf(it.pattern);
+    let st,pat=it.pattern;
+    if(exist&&exist.name===it.name)st=['dis','已添加'];
+    else if(exist)st=['move',`${APPS[app].n} 中已是「${exist.name}」，改用`];
+    else if(g&&g.pinned)st=['move',`「${g.name}」已固定，改用`];
+    else if(g)st=['warn',`在 ${APPS[app].n} 中替换全局「${g.name}」`];
+    else st=['ok','空闲节奏'];
+    return {it,i,st,pat};
+  });
+  const taken=new Set(rows.filter(r=>r.st[0]!=='move').map(r=>r.pat));
+  rows.filter(r=>r.st[0]==='move').forEach(r=>{r.pat=freePatterns(app,taken,1)[0];taken.add(r.pat)});
+  rows.forEach(r=>{r.on=r.st[0]==='dis'?false:(S.tpl.pick[app+r.i]??(r.st[0]==='ok'||r.st[0]==='move'))});
+  return rows;
+}
+function tplHTML(){
+  const rows=tplRows(),n=rows.filter(r=>r.on).length;
+  const stHTML=r=>r.st[0]==='move'?`<span class="st move">${ic('swap',12)}${esc(r.st[1])} ${glyph(r.pat)}</span>`:`<span class="st ${r.st[0]}">${r.st[0]==='warn'?ic('swap',12):''}${esc(r.st[1])}</span>`;
+  return `<div class="modal"><div class="tpl">
+    <div class="tpl-hd"><span class="modal-ic">${ic('template',18)}</span><div><h4>从模板添加程序含义</h4><p>只在所选程序中生效，逐条确认后才添加。固定的节奏会自动换成空闲节奏；会替换全局含义的条目默认不勾选。</p></div></div>
+    <div class="field"><label>模板</label><div class="seg"><button class="on">${ic('url',14)}浏览器</button><button disabled>会议 · v0.10</button><button disabled>演示 · v0.10</button></div></div>
+    <div class="field"><label>应用到</label><div class="apps">${TEMPLATE.apps.map(a=>`<button class="appchip ${S.tpl.app===a?'on':''}" data-act="tpl-app" data-k="${a}">${av(a,18)}${APPS[a].n}</button>`).join('')}</div></div>
+    ${rows.map(r=>`<button class="trow ${r.st[0]==='dis'?'dis':''}" data-act="tpl-toggle" data-i="${r.i}"><span class="cb ${r.on?'on':''}">${r.on?ic('check',13):''}</span>${glyph(r.pat,'md')}<span>${esc(r.it.name)}</span>${keys(r.it.target)}${stHTML(r)}</button>`).join('')}
+  </div><div class="modal-ft"><span class="ft-note">${ic('shield',12)}只添加绑定，不会执行任何动作</span><span class="sp"></span><button class="btn" data-act="modal-close">取消</button><button class="btn primary" data-act="tpl-apply" ${n?'':'disabled'}>添加 ${n} 条到 ${APPS[S.tpl.app].n}</button></div></div>`;
+}
+function openTpl(){openModal(tplHTML())}
+function openModal(html){$('#modal').innerHTML=html;$('#modal').classList.add('show')}
+const RECENT=[['code','运行中'],['feishu','运行中'],['msedge','最近使用'],['wechat','最近使用'],['chrome','运行中'],['excel','最近使用']];
+function appAddHTML(){
+  return `<div class="modal" style="width:480px"><div class="tpl">
+    <div class="tpl-hd"><span class="modal-ic">${ic('plus',18)}</span><div><h4>添加程序</h4><p>添加后会在节奏地图里多一列。不改任何格子时，这个程序全部沿用全局含义。</p></div></div>
+    ${RECENT.map(([k,s])=>{const added=S.apps.includes(k);return `<button class="trow pick ${added?'dis':''}" data-act="app-pick" data-k="${k}">${av(k,22)}<span><b>${APPS[k].n}</b> <span class="proc">${APPS[k].p}.exe</span></span><span class="st ${added?'dis':'ok'}">${added?'已添加':s}</span></button>`}).join('')}
+  </div><div class="modal-ft"><button class="btn sm" data-act="pick-window">${ic('target',14)}拾取窗口</button><button class="btn sm">浏览 .exe…</button><span class="sp"></span><button class="btn" data-act="modal-close">取消</button></div></div>`;
+}
+function appRemoveHTML(k){
+  const own=S.commands.filter(c=>c.scope===k).sort((a,b)=>pidx(a.pattern)-pidx(b.pattern));
+  return `<div class="modal" style="width:500px"><div class="tpl">
+    <div class="tpl-hd"><span class="modal-ic" style="color:var(--coral);background:var(--coral-d)">${ic('trash',18)}</span><div><h4>移除 ${APPS[k].n}？</h4><p>${own.length?`${APPS[k].n} 中的 ${own.length} 个含义会被删除，之后在 ${APPS[k].n} 里这些节奏变成：`:`${APPS[k].n} 还没有设置任何含义，移除后不影响使用。`}</p></div></div>
+    ${own.map(c=>{const g=globalOf(c.pattern);return `<div class="trow rm">${glyph(c.pattern,'md')}<span>${esc(c.name)}</span><span class="st ${g?'ok':'dis'}">${ic('swap',12)}${g?`全局「${esc(g.name)}」`:'无含义'}</span></div>`}).join('')}
+  </div><div class="modal-ft"><span class="ft-note">${ic('info',12)}其他程序和全局含义不受影响</span><span class="sp"></span><button class="btn" data-act="modal-close">取消</button><button class="btn danger-solid" data-act="app-remove-ok" data-k="${k}">移除 ${APPS[k].n}</button></div></div>`;
+}
+function closeModal(){$('#modal').classList.remove('show')}
+
+/* ============ other pages ============ */
+function renderGestures(){$('#page-gestures').innerHTML=pageHd('gestures')+`<div class="card"><div class="note">${ic('info',15)}<span>v0.9 不改动方向手势；页面与 v0.8 相同。</span></div></div>`}
+function renderWorkflows(){$('#page-workflows').innerHTML=pageHd('workflows')+`<div class="card"><div class="note">${ic('info',15)}<span>v0.9 不改动工作流编辑器；页面与 v0.8 相同。工作流属于“到哪都要用”的动作，默认固定。</span></div></div>`}
+function srow(nm,ds,ctl){return `<div class="srow"><div class="info"><div class="nm">${nm}</div><div class="ds">${ds}</div></div><div class="ctl">${ctl}</div></div>`}
+const sw=k=>`<button class="switch ${S.set[k]?'on':''}" data-act="set-toggle" data-k="${k}"></button>`;
+function renderSettings(){
+  $('#page-settings').innerHTML=pageHd('settings')+`<div class="settings-wrap">
+    <div class="sgroup"><div class="sgroup-t">情境 · Context Pulse <span class="new">NEW</span></div><div class="card srows">
+      ${srow('按程序切换含义','光标所在程序给某个节奏定义了自己的含义时，使用它；关闭后所有程序只用全局含义',sw('context'))}
+      ${srow('新含义提醒','在某个程序里替换了全局含义后，前 5 次使用时胶囊会提示「这里是新含义 · 全局是什么」',sw('remind'))}
+      ${srow('胶囊显示当前程序','输入时在 Pulse Capsule 上显示光标下的程序，以及用的是程序含义还是全局含义',sw('showCtx'))}
+      ${srow('发送快捷键前激活光标下的窗口','保证快捷键作用在你指着的窗口，而不是当前有键盘焦点的窗口',sw('activate'))}
+    </div></div>
+    <div class="sgroup"><div class="sgroup-t">节奏识别</div><div class="card srows"><div style="padding:12px 0 18px">${rulerHTML('sr')}</div></div></div>
+    <div class="note">${ic('info',15)}<span>通用、鼠标拦截、Pulse Capsule、安全与数据等其余设置与当前版本相同，此处省略。</span></div>
+  </div>`;
+}
+
+/* ============ events ============ */
+const H={
+  nav:a=>go(a.dataset.page),
+  ctx:a=>setCtx(a.dataset.k),
+  fit:()=>{document.body.classList.toggle('real');$('#fitBtn').textContent=document.body.classList.contains('real')?'切换适应屏幕':'切换 100% 尺寸';fit()},
+  'win-min':()=>toast('最小化（演示）','info'),
+  'win-max':()=>$('#win').classList.toggle('max'),
+  'win-close':()=>$('#win').classList.add('hidden'),
+  tray:()=>$('#win').classList.remove('hidden'),
+  'toggle-enabled':()=>{S.enabled=!S.enabled;renderSidebar();renderStatus();LV.key=''},
+  route:a=>{S.route=+a.dataset.i;renderSidebar();renderStatus();renderDashboard()},
+  'copy-log':()=>toast('诊断日志已复制'),
+  view:a=>{S.view=a.dataset.k;renderCommands()},
+  cell:a=>{const s=a.dataset.s,p=a.dataset.p,c=s?ownOf(s,p):globalOf(p);if(c)selectCmd(c.id);else{selectCmd(null,s,p);S.cmdSel=null;if(s){const g=globalOf(p);if(g){S.draft.kind=g.kind}}}refreshCommands();if(!c)$('[data-bind="name"]').focus()},
+  'cell-lock':a=>{const g=globalOf(a.dataset.p);toast(`「${g.name}」已固定，在所有程序中保持不变；可在全局指令里取消固定`,'info')},
+  'cmd-sel':a=>{selectCmd(+a.dataset.id);refreshCommands()},
+  'cmd-new':()=>{selectCmd(null,'');S.cmdSel=null;refreshCommands();$('[data-bind="name"]').focus()},
+  'app-add':()=>openModal(appAddHTML()),
+  'app-pick':a=>{const k=a.dataset.k;ensureApp(k);closeModal();renderCommands();renderSidebar();toast(`已添加 ${APPS[k].n}：点它那一列的格子就能改含义`)},
+  'app-remove':a=>openModal(appRemoveHTML(a.dataset.k)),
+  'app-remove-ok':a=>{const k=a.dataset.k,n=S.commands.filter(c=>c.scope===k).length;S.commands=S.commands.filter(c=>c.scope!==k);S.apps=S.apps.filter(x=>x!==k);
+    if(S.draft&&S.draft.scope===k)selectCmd((S.commands[0]||{}).id);closeModal();saved();renderSidebar();renderStatus();renderCommands();toast(`已移除 ${APPS[k].n}${n?`，${n} 个含义已删除`:''}；在 ${APPS[k].n} 中全部使用全局含义`)},
+  'cmd-save':saveCmd,
+  'cmd-del':()=>{const d=S.draft;S.commands=S.commands.filter(c=>c.id!==d.id);const g=d.scope&&globalOf(d.pattern);selectCmd(g?g.id:(S.commands[0]||{}).id);saved();toast(d.scope?`${APPS[d.scope].n} 中的 ${ptxt(d.pattern)} 已恢复为${g?`全局「${g.name}」`:'无含义'}`:`已删除「${d.name}」`);renderSidebar();renderCommands()},
+  'd-scope':a=>{S.draft.scope=a.dataset.k;refreshCommandsInspector()},
+  'pick-window':()=>toast('演示：3 秒内把光标移到目标窗口上，自动识别它的程序','info'),
+  'pin-toggle':()=>{const d=S.draft;d.pinned=!d.pinned;d.pinManual=true;refreshCommandsInspector()},
+  kind:a=>{if(S.draft.kind!==a.dataset.k){const was=S.draft.kind;S.draft.kind=a.dataset.k;if((was==='shortcut')!==(a.dataset.k==='shortcut')||a.dataset.k==='repeat')S.draft.target='';if(!S.draft.scope&&!S.draft.pinManual)S.draft.pinned=autoPin(S.draft)}refreshCommandsInspector()},
+  preset:a=>{const d=S.draft;d.target=a.dataset.k;if(!d.scope&&!d.pinManual)d.pinned=autoPin(d);if(!d.name.trim())d.name=a.textContent;refreshCommandsInspector()},
+  'pat-add':a=>{const d=S.draft;if(d.pattern.length>=5)return toast('节奏最多 5 位','alert');d.pattern+=a.dataset.c;refreshComposer()},
+  'pat-set':a=>{S.draft.pattern=a.dataset.p;refreshComposer()},
+  'pat-back':()=>{S.draft.pattern=S.draft.pattern.slice(0,-1);refreshComposer()},
+  'pat-clear':()=>{S.draft.pattern='';refreshComposer()},
+  'tpl-open':()=>{S.tpl.pick={};openTpl()},
+  'tpl-app':a=>{S.tpl.app=a.dataset.k;openTpl()},
+  'tpl-toggle':a=>{const r=tplRows()[+a.dataset.i];S.tpl.pick[S.tpl.app+r.i]=!r.on;openTpl()},
+  'tpl-apply':()=>{const app=S.tpl.app,add=tplRows().filter(r=>r.on);ensureApp(app);add.forEach(r=>S.commands.push({id:++uid,name:r.it.name,pattern:r.pat,kind:'shortcut',target:r.it.target,scope:app,heat:[0,0,0,0,0,0,0],last:'',lastApp:'',remind:globalOf(r.pat)?5:0}));
+    closeModal();selectCmd(uid);saved();toast(`已添加 ${add.length} 条 ${APPS[app].n} 含义`);renderSidebar();renderCommands()},
+  'modal-close':closeModal,
+  'set-toggle':a=>{const k=a.dataset.k;S.set[k]=!S.set[k];a.classList.toggle('on',S.set[k]);saved();renderSidebar();renderStatus()},
+};
+function refreshCommandsInspector(){const y=$('#cmd-insp').scrollTop;$('#cmd-insp').innerHTML=cmdInspectorHTML();$('#cmd-insp').scrollTop=y}
+document.addEventListener('click',e=>{const a=e.target.closest('[data-act]');if(!a)return;const f=H[a.dataset.act];if(f)f(a,e)});
+document.addEventListener('input',e=>{
+  const t=e.target,ds=t.dataset;
+  if(ds.bind&&S.draft){S.draft[ds.bind]=t.value}
+  else if(t.id==='cmd-q'){S.cmdQuery=t.value;$('#cmd-body').innerHTML=listHTML()}
+});
+const KEYMAP={ArrowLeft:'Left',ArrowRight:'Right',ArrowUp:'Up',ArrowDown:'Down',' ':'Space',Escape:'Esc'};
+function captureKey(e){
+  e.preventDefault();
+  if(e.key==='Backspace'){S.draft.target='';$('#keycap').innerHTML='<span class="ph">点这里，然后按下组合键</span>';return}
+  if(['Control','Shift','Alt','Meta'].includes(e.key))return;
+  const mods=[];if(e.ctrlKey)mods.push('Ctrl');if(e.shiftKey)mods.push('Shift');if(e.altKey)mods.push('Alt');if(e.metaKey)mods.push('Win');
+  const k=KEYMAP[e.key]||(e.key.length===1?e.key.toUpperCase():e.key);
+  S.draft.target=[...mods,k].join('+');$('#keycap').innerHTML=keys(S.draft.target);
+}
+const typing=()=>{const a=document.activeElement;return a&&(a.tagName==='INPUT'||a.id==='keycap')};
+document.addEventListener('keydown',e=>{
+  if(document.activeElement&&document.activeElement.id==='keycap')return captureKey(e);
+  if(typing())return;
+  if(e.code==='KeyR'){e.preventDefault();if(!e.repeat)chordDown()}
+  else if(e.code==='Space'){e.preventDefault();if(!e.repeat)pulseDown()}
+  else if(e.key==='Escape'&&$('#modal').classList.contains('show'))closeModal();
+});
+document.addEventListener('keyup',e=>{
+  if(typing())return;
+  if(e.code==='KeyR')chordUp();
+  else if(e.code==='Space')pulseUp();
+});
+document.addEventListener('wheel',e=>{if(CH.down!=null){e.preventDefault();chordCancel()}},{passive:false});
+$('#titlebar').addEventListener('dblclick',e=>{if(!e.target.closest('button'))H['win-max']()});
+function fit(){const d=$('#desktop');if(document.body.classList.contains('real')){d.style.transform='none';return}const s=Math.min(innerWidth/1500,innerHeight/1000);d.style.transform=`translate(-50%,-50%) scale(${s})`}
+addEventListener('resize',fit);
+setInterval(()=>{const c=$('#clock');if(c)c.textContent=new Date().toTimeString().slice(0,5)},10000);
+
+fit();renderDemo();renderStatus();go('commands');requestAnimationFrame(loop);
+</script>
+</body>
+</html>

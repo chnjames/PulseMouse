@@ -174,7 +174,7 @@
 
 ### 阶段 4：按应用切换指令集（规模：中）
 
-> **状态：未开始。**
+> **状态：方案已确认，待开发（v0.9 Context Pulse）。** 需求见 [`V0_9_CONTEXT_PULSE_SPEC.md`](V0_9_CONTEXT_PULSE_SPEC.md)，效果图见 [`design/PulseMouse-v0.9-Context-Pulse.html`](design/PulseMouse-v0.9-Context-Pulse.html)。
 
 - 指令可设置「全局」或「仅在某应用中」；同一节奏在不同应用中可绑定不同动作。
 - 冲突检测按作用范围计算。
