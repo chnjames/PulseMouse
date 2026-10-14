@@ -136,8 +136,8 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
         {
             case LivePhase.Press: chip = "按住中"; chipTone = "live"; state1 = $"第 {seq.Length + 1} 位 · 正在计时"; sub = "松开后按时长判定为 · 或 —"; break;
             case LivePhase.Typing: chip = "输入中"; chipTone = "live"; state1 = $"已输入 {seq.Length} 位";
-                sub = _c.IsChordMode ? "松开右键立即提交；滚动滚轮取消" : $"停顿 {s.SequenceGapMs} ms 后自动提交；Esc 取消"; break;
-            case LivePhase.Armed: chip = "已激活"; chipTone = "live"; state1 = "指令模式已激活"; sub = "7 秒内用左键输入节奏；Esc 取消"; break;
+                sub = _c.IsChordMode ? "松开右键立即提交；滚动滚轮取消" : $"停顿 {s.SequenceGapMs} ms 后自动提交；在本窗口按 Esc 可取消"; break;
+            case LivePhase.Armed: chip = "已激活"; chipTone = "live"; state1 = "指令模式已激活"; sub = "7 秒内用左键输入节奏，不输入会自动退出"; break;
             case LivePhase.Matched when _c.HitCommand is { } cmd:
                 chip = "已匹配"; chipTone = "live"; check = true; state1 = "已执行 · " + cmd.Name;
                 sub = $"{Loc.Kind(cmd.ActionKind)} · {PulseController.TargetText(cmd)}"; break;

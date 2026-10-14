@@ -1,45 +1,98 @@
-# PulseMouse v0.7 — V3 Liquid Glass
+# PulseMouse
 
-本版本依据 `PulseMouse-V3.html` 设计稿重构仪表盘与设置体验，并实现统计、可视化节奏编辑、自启动、提示音、语言、胶囊位置/动画和配置备份。详见 `docs/V0_7_DESIGN_AND_IMPLEMENTATION.md` 与 `docs/TEST_REPORT_V0_7.md`。
+鼠标上的快捷键：按住右键，用左键敲一个节奏，松开右键就执行。光标不动、不用看屏幕，适合每天最常用的 3–8 个动作。
 
-基于已在用户 Windows 环境正常运行的 v0.1.2 更新，兼容其 JSON 配置和指令映射。
+当前版本 v0.8（Windows 10/11，.NET 10，WPF）。产品定位与路线见 `docs/PRODUCT_ROADMAP.md`。
 
-产品定位、竞品分析与后续路线见 `docs/PRODUCT_ROADMAP.md`。
+## 怎么用
 
-## 本版新增
-- 中键长按的移动防误触：按住期间鼠标位移大于 12px 时，不激活左键指令窗口。
-- 激活窗口 7 秒到期时，即使鼠标完全静止，也由 UI 计时器主动清理状态。
-- 添加“取消当前输入”按钮，退出输入窗口并清空节奏序列。
-- 增加中键激活状态的纯逻辑单元冒烟测试（短按、移动、激活、超时、取消）。
+### 节奏
 
-## 使用
+- 点 `·`：快速点一下（≤ 300 ms）。
+- 划 `—`：按住约半秒（500–1600 ms）。
+- 300–500 ms 之间、或短于 35 ms、长于 1600 ms 的按压无法判定，本次输入作废。
+- 一条节奏最多 5 位。配置里点写作 `.`，划写作 `-`，例如 `.-.`。
+
+### 输入方式
+
+| 方式 | 操作 | 原生功能 |
+|---|---|---|
+| 自动（默认） | 鼠标有侧键时用侧键，否则用右键和弦；按一下侧键即切换并记住 | 见对应方式 |
+| 右键和弦 | 按住右键，左键敲节奏，松开右键立即执行 | 右键单击、拖拽、长按照常可用（见下） |
+| 侧键 X1 / X2 | 直接用侧键敲节奏，停顿 750 ms 后执行 | 选中的侧键不再有后退/前进 |
+| 中键（经典） | 静止长按中键 550 ms 激活，7 秒内用左键敲节奏，停顿 750 ms 后执行 | 中键事件照常透传，浏览器可能进入自动滚动 |
+
+右键和弦如何保留原生右键：按下右键时先扣住，再根据接下来发生的事决定。
+
+- 没按左键就松开：补发一次完整右键单击，右键菜单正常弹出。
+- 按住时移动超过 16 px：补发右键按下并放行，右键拖拽不受影响。
+- 按住 8 秒仍没按左键：补发右键按下并放行。
+- 敲节奏过程中滚动滚轮：取消本次输入。
+
+### 动作类型
+
+- 打开程序：`.exe` / `.lnk` 路径或命令名，支持环境变量。
+- 打开文件夹。
+- 打开网址：仅 http / https。
+- 发送快捷键：如 `Ctrl+C`、`Shift+Win+S`、`Alt+Tab`；指令页可直接按键录入，也有常用预设。
+- 工作流：1–12 步，每步延迟 0–5000 ms，步骤可为程序 / 文件夹 / 网址；不允许嵌套；执行前默认需要确认。
+
+### 其他功能
+
+- 方向手势：按住中键上下左右拖动（≥ 75 px），在中键模式和右键和弦下可用。
+- 状态胶囊：屏幕底部显示输入进度和结果；输入中停顿约 0.6 s 会列出当前还能匹配的节奏。
+- 托盘图标按状态变色：薄荷绿为监听中，灰色为已暂停，琥珀色为监听未生效或模拟输入被拦截。
+- 统计：今日执行与未匹配次数、每条指令的使用次数、最近 90 天的每日历史、本周运行时长。
+- 设置：开机自启动（写入当前用户 Run 注册表项，无需管理员）、成功提示音、中文 / English、胶囊位置与呼吸动画、配置导出 / 导入（导入后立即生效）。
+
+### 不会拦截鼠标的情况
+
+为避免误伤，以下情况 PulseMouse 让鼠标保持原生行为，并在诊断日志中写明原因：
+
+- 右键和弦：光标下的窗口以管理员权限运行，而 PulseMouse 没有（Windows 不允许普通程序向其补发输入）。
+- 程序在设置页的“排除的程序”列表中。
+- 前台程序全屏运行，且开启了“全屏时暂停”（默认开启）。
+- 模拟输入被系统丢弃（例如远程控制工具屏蔽了键鼠，或 PulseMouse 从受限环境启动）：右键和弦暂停、右键恢复原生，快捷键动作也无法发送，恢复后自动重新启用。
+
+## 构建与运行
+
+需要 .NET 10 SDK。
+
 ```powershell
-dotnet restore PulseMouse.slnx
 dotnet build PulseMouse.slnx -c Release
-dotnet run --project tests/PulseMouse.Core.SmokeTests
-dotnet run --project src/PulseMouse.App
+dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
 ```
 
-## 验证步骤
-1. 中键短按，不进入输入模式。
-2. 按住中键 650ms 同时拖动鼠标超过 12px，不能进入输入模式。
-3. 中键保持位置按住 650ms 后松开，输入 `..`，等待 750ms，打开记事本。
-4. 中键长按后不操作，7 秒后应自动退出输入模式；左键恢复正常。
-5. 长按中键后按“取消当前输入”，左键立即恢复普通点击。
-6. 测试 X1/X2 原始监听及手动侧键模式；原有 JSON 指令不被覆盖。
+程序位于 `src\PulseMouse.App\bin\Release\net10.0-windows\PulseMouse.exe`，请在资源管理器中双击启动。从开发工具的终端启动时，模拟输入可能被丢弃，右键和弦会自动暂停。
 
-## 已知限制与安全说明
-- 中键原始事件仍透传到其他软件，可能触发浏览器自动滚动等操作；这不是完整的中键无副作用方案。
-- 自动模式仍可能在首次出现侧键事件时锁定侧键，可手动指定“中键”。
-- 当前没有系统级 ESC 取消快捷键；失控时可切换托盘暂停或关闭程序。
-- 浮层、AI 和方向手势仍未实现。
-- 源码仅做静态检查：本生成环境无 Windows/.NET SDK，需在 Windows 真机编译与验证。
+`build-windows.ps1` 依次执行构建、冒烟测试，并发布自包含单文件版本到 `publish\win-x64\`。
 
-## v0.2 UI update
-The v0.2 dashboard uses a WPF Minimal Fluent-inspired visual style and retains the v0.1.3 input engine. See `CHANGELOG.md` for exact scope, limitations, and Windows acceptance steps.
+修改应用图标：编辑 `src/PulseMouse.App/Services/AppIcon.cs`，然后运行
 
+```powershell
+dotnet run --project tools/IconGen -c Release -- src/PulseMouse.App/Assets/PulseMouse.ico preview.png
+```
 
-## v0.3 candidate features
-- Navigable sections (scroll-to), editable cardinal mouse gestures, non-activating overlay, JSON workflow steps (requiring confirmation), AI HTTPS launcher.
-- See `docs/RELEASE_CHECKLIST.md` for known limitations and manual acceptance tests.
-- Do not claim production-ready until real Windows build/tests pass.
+重新生成 `.ico`，`preview.png` 与 `preview-tray.png` 用于检查各尺寸与托盘效果。
+
+## 配置
+
+配置保存在 `%LOCALAPPDATA%\PulseMouse\settings.json`。旧版本配置可直接读取，新增字段使用默认值。导入配置会替换当前全部指令、手势与偏好。
+
+## 已知限制
+
+- 未签名，可能被杀毒软件提示；不建议在有反作弊的游戏中使用。
+- 快捷键动作无法发送到以管理员权限运行的窗口（除非 PulseMouse 也以管理员身份运行）。
+- 侧键模式会占用所选侧键的后退 / 前进功能。
+- 中键模式下中键事件照常透传，浏览器可能触发自动滚动。
+- Esc 取消只在 PulseMouse 窗口处于前台时有效；在其他程序中请用滚轮（右键和弦）或等待超时。
+- 指令不能按应用区分，同一节奏在所有程序中含义相同。
+- 没有安装包和自动更新。
+
+## 文档
+
+- `docs/PRODUCT_ROADMAP.md`：定位、竞品、路线图与验证计划。
+- `docs/ARCHITECTURE.md`：模块划分与输入处理流程。
+- `docs/RELEASE_CHECKLIST.md`：真机手工验收清单。
+- `CHANGELOG.md`：版本记录。
+- `docs/archive/`：v0.3–v0.7 时期的历史文档，内容已过时，仅供查阅。

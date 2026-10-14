@@ -1,39 +1,65 @@
-# PulseMouse v0.3 Windows release gate
+# 真机验收清单
 
-> Status: source candidate, not a verified production release.
+适用于当前版本（v0.8.0 及其后未发布的改动）。自动化只覆盖 `PulseMouse.Core` 的冒烟测试；鼠标钩子、补发输入和界面必须在真机上手工验证。
 
-## Build
+## 准备
 
 ```powershell
-dotnet restore PulseMouse.slnx
 dotnet build PulseMouse.slnx -c Release
-dotnet run --project tests/PulseMouse.Core.SmokeTests
-dotnet run --project src/PulseMouse.App
+dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
 ```
 
-## Manual tests (required)
+- 完全退出旧实例（托盘 → 退出），在资源管理器中双击 `src\PulseMouse.App\bin\Release\net10.0-windows\PulseMouse.exe`。
+- 总览日志中应有“Hook 安装成功”，且没有“模拟输入被系统拦截”；托盘图标为薄荷绿。
 
-- [ ] v0.1.2 and v0.1.3 configuration migrates without loss
-- [ ] middle click in Chrome still works normally when not invoking a gesture
-- [ ] stationary middle hold arms rhythm input; double tap launches notepad
-- [ ] middle pressed + 100 px right + release opens configured notepad
-- [ ] middle pressed + 100 px upward + release opens explorer
-- [ ] unintended diagonal movement does not trigger commands
-- [ ] gesture disabled causes no gesture execution
-- [ ] X1 / X2 side-button modes still work when those buttons exist
-- [ ] all hook failures, input cancellation and pause recover safely
-- [ ] workflow confirmation denies unauthorized execution
-- [ ] malformed workflow JSON rejected and no process started
-- [ ] overlay does not steal focus; no click interception
-- [ ] settings survive restart and tray exit unhooks global mouse
-- [ ] perform 30-minute run with CPU, memory, crash diagnostics
+## 右键和弦（无侧键的鼠标，或输入方式选“右键和弦”）
 
-## Known boundaries
+- [x] 按住右键、左键点两下、松开右键：执行 `..` 绑定的指令，不弹出右键菜单。（2026-10-14 已在本机确认）
+- [x] 右键单击：右键菜单正常弹出。（2026-10-14 已在本机确认）
+- [ ] 在资源管理器、浏览器、Office 中：右键单击、右键拖拽（移动超过 16 px）行为与未安装时一致。
+- [ ] 按住右键不动 8 秒以上：按长按放行，相关程序行为正常。
+- [ ] 敲节奏过程中滚动滚轮：本次输入取消，松开右键不执行、不弹菜单。
+- [ ] 敲一个未绑定的节奏：胶囊显示未匹配，不执行任何动作。
+- [ ] 按住右键、敲一下后停顿：约 0.6 秒后胶囊上方出现可用节奏清单。
 
-- Mouse middle events are forwarded to foreground application, so browser autoscroll may activate. Production input suppression needs separate design and cross-app testing.
-- Auto mode first observed X1/X2 can lock subsequent auto mode; manual reset/re-selection may be necessary.
-- Current gesture classifier accepts only a single dominant cardinal direction, not multi-stroke paths.
-- Workflow commands execute local application launches/URLs/folders; do not import untrusted JSON.
-- AI button opens a configured HTTPS browser page only. No Agent or computer control integration is implemented.
-- No autoupdater, signing, packaging or telemetry shipped.
-- .NET SDK unavailable in authoring runtime: Windows compilation and UI smoke tests are unverified.
+## 不拦截的情况
+
+- [ ] 管理员权限窗口（如任务管理器）：右键菜单正常，日志写明“以管理员权限运行”。
+- [ ] 把某程序加入“排除的程序”：在该程序中右键完全原生，日志写明“在排除列表中”。
+- [ ] 浏览器 F11 全屏或全屏播放视频：右键原生，日志写明“正在全屏运行”；关闭“全屏时暂停”后恢复和弦。
+- [ ] 远程控制工具开启“屏蔽键鼠”时：日志提示模拟输入被拦截，托盘变琥珀色，右键恢复原生；解除后自动恢复，托盘变回薄荷绿。
+
+## 侧键与自动模式（有侧键的鼠标）
+
+- [ ] 自动模式下首次按侧键：日志提示“已检测到侧键”，此后用侧键敲节奏，停顿 750 ms 执行。
+- [ ] 重启 PulseMouse 后仍使用侧键，不需要重新检测。
+- [ ] 设置页“重新检测”后回到右键和弦。
+- [ ] 手动选择 X1 / X2：对应侧键用于节奏，另一个侧键的后退 / 前进不受影响。
+
+## 中键模式与方向手势
+
+- [ ] 静止长按中键 550 ms 后松开，7 秒内用左键敲 `..`，停顿后执行。
+- [ ] 长按中键时移动超过 12 px：不激活。
+- [ ] 激活后不操作：7 秒后自动退出，左键恢复正常。
+- [ ] 按住中键向上 / 右拖动超过 75 px：执行对应手势（中键模式与右键和弦下均可）。
+
+## 动作
+
+- [ ] 快捷键：复制 `Ctrl+C`、粘贴 `Ctrl+V`、关闭标签 `Ctrl+W`、截图 `Shift+Win+S`、切换窗口 `Alt+Tab` 均生效。
+- [ ] 快捷键发往管理员权限窗口：不生效，但 PulseMouse 不崩溃、不卡住修饰键。
+- [ ] 程序（含 `.lnk`）、文件夹、https 网址正常打开。
+- [ ] 工作流：执行前弹出确认；拒绝则不执行任何步骤。
+
+## 界面与设置
+
+- [ ] 托盘：暂停后图标变灰，恢复后变回薄荷绿；悬停文字与状态一致。
+- [ ] 浅色与深色任务栏上，任务栏图标与托盘图标边缘干净、无黑边。
+- [ ] 配置导出后再导入：立即生效，指令与统计不丢失。
+- [ ] 开机自启动：注销再登录后自动运行。
+- [ ] 多显示器、125% / 150% 缩放下胶囊位置正确，不抢焦点、可点击穿透。
+- [ ] 跨过午夜：今日统计清零，前一天写入历史，总览显示日均与未匹配率。
+
+## 稳定性
+
+- [ ] 连续使用 30 分钟以上：CPU 与内存平稳，鼠标无卡顿、无丢键。
+- [ ] 托盘退出后鼠标完全恢复原生。

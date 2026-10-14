@@ -1,41 +1,69 @@
-# PulseMouse Changelog
+# 更新记录
 
-## v0.2.0 — Minimal Fluent UI
-- Reworked WPF dashboard with side navigation visual, adaptive input card, command management, and diagnostic log.
-- Added 5-segment live rhythm pulse display (short/long bars).
-- Preserved the v0.1.3 input hook, input state machine, action runner, settings JSON structure, and command handling.
-- Retained existing side button and middle button input modes.
+## 未发布（基于 v0.8.0，2026-10-14）
 
-### Limitations and verification
-- The sidebar is a visual hierarchy in this iteration, **not** a clickable multi-page navigation system.
-- Pulse bars show recognized input sequence, not a high-frequency oscilloscope waveform.
-- No new mouse gesture engine, AI integration, light mode, or installer is included.
-- Windows build and integration tests must be performed on a Windows machine with .NET 10 SDK.
+### 新的唤醒方式：右键和弦
+- 按住右键、用左键敲节奏、松开右键立即执行，不再等待 750 ms 停顿。
+- 右键原生行为保留：单击补发、移动超过 16 px 按拖拽放行、按住 8 秒未敲节奏按长按放行、滚轮取消。
+- 自动模式：有侧键时用侧键，否则用右键和弦；检测到的侧键写入配置，重启后保持，可在设置中重新检测。
+- 兼容远程控制工具注入的输入（如 ToDesk），并防止与其他钩子工具互相补发形成循环。
+- 检测模拟输入被系统丢弃：自动暂停右键和弦、恢复原生右键，恢复后自动重新启用；探测改为“右移 1 px 再移回”，避免零位移事件被忽略导致误判。
 
-## Windows verification
-```powershell
-dotnet restore PulseMouse.slnx
-dotnet build PulseMouse.slnx -c Release
-dotnet run --project tests/PulseMouse.Core.SmokeTests
-dotnet run --project src/PulseMouse.App
-```
-Verify X1/X2, middle-hold + left-click, mapping CRUD, test action, cancellation, system tray, and the pulse visualization. Close prior PulseMouse instance before launching.
+### 加固
+- 鼠标钩子移到独立线程，界面卡顿不再影响系统鼠标。
+- 不拦截的情况：管理员权限窗口（右键和弦）、排除列表中的程序、全屏程序（可关闭）。
 
-## v0.3 (candidate)
-- Real one-stroke mouse gestures using middle hold+movement; user-configurable mappings.
-- Click-through feedback overlay, navigation, AI URL launcher and workflow JSON execution with confirmation.
-- Added gesture recognition smoke tests.
-- Windows build and real-world interaction validation PENDING.
+### 降低记忆负担
+- 犹豫提示：输入中停顿约 0.6 秒，在胶囊上方列出当前还能匹配的节奏；设置中可关闭、可预览。
 
-## v0.4.0 (UI & Capsule candidate, 2026-10-13)
-- Unified the WPF dark design system for combo items, DataGrid cells, headers and selection, and keyboard focus appearance.
-- Replaced mismatched OS title bar with custom WindowChrome title bar including native window resizing and dragging.
-- Added bottom-center, click-through Pulse Capsule for activation, pulse entry, matched commands, and unmatched sequences.
-- Added Browse action for selecting .exe/.lnk applications and folders when editing commands.
-- Enabled content scrolling/virtualization flags on command and gesture grids; preserved existing input and workflow code.
-- Validation: XML parsing only in non-Windows environment; Windows build and runtime acceptance are still mandatory.
+### 新动作：发送快捷键
+- 支持 Ctrl / Shift / Alt / Win 组合与常用按键（字母、数字、F1–F24、方向与编辑键、媒体与音量键、标点）。
+- 指令页可直接按键录入，提供常用预设。
+- 模拟输入被拦截时拒绝发送并提示。
 
-## v0.5 · UI redesign candidate
-- 将一页长滚动改为真正分区的侧边导航。
-- 调整颜色资源与内容层级，保留所有命令事件绑定。
-- 未进行 Windows 原生编译，需真机验收。
+### 统计
+- 记录每条指令的当日使用次数；跨日写入最近 90 天历史。
+- 总览显示前几天的日均执行次数与未匹配率。
+
+### 图标
+- 新的“点 + 划”应用图标，写入 exe（资源管理器、任务栏、开始菜单可见）。
+- 托盘图标按状态变色：监听中薄荷绿、已暂停灰色、监听未生效或模拟输入被拦截琥珀色。
+- 修复托盘图标在浅色任务栏上的黑边。
+- 新增 `tools/IconGen` 用于重新生成图标与预览。
+
+### 其他
+- 中键模式的界面提示改为准确描述 Esc 的作用范围。
+- 文档整理：重写 README、架构说明与验收清单，历史文档移入 `docs/archive/`。
+
+## v0.8.0（2026-10-13）
+- 按 v0.8 设计稿重建 WPF 界面：总览、指令、手势、工作流、设置五个页面，自绘标题栏与托盘。
+- 可视化节奏编辑、冲突检测；状态胶囊与工作流确认窗重做。
+- 新增产品路线图 `docs/PRODUCT_ROADMAP.md`。
+
+## v0.7（V3 Liquid Glass）
+- 按 V3 设计稿重构总览与设置。
+- 今日执行、已绑定指令、本周运行时长统计。
+- 开机自启动、成功提示音、中文 / English、胶囊位置与呼吸动画、配置导出 / 导入。
+- 详见 `docs/archive/V0_7_DESIGN_AND_IMPLEMENTATION.md`。
+
+## UI 2.0（Neo Glass Black，v0.5 之后）
+- 五个固定页面导航，重做滚动条、输入框、下拉框等控件模板。
+- 详见 `docs/archive/UI_2_0_CHANGELOG.md`。
+
+## v0.5
+- 侧边栏改为真正的分区切换，统一颜色与暗色控件。
+
+## v0.4
+- 统一暗色控件样式，自绘标题栏。
+- 新增屏幕底部、不抢焦点的状态胶囊。
+- 指令编辑支持浏览选择 `.exe` / `.lnk` / 文件夹。
+- v0.4.1、v0.4.2 修复编译错误。
+
+## v0.3
+- 中键拖动的四方向手势，可配置。
+- 不抢焦点的反馈浮层、AI 网址入口、需确认的 JSON 工作流。
+- v0.3.1 修复编译错误。
+
+## v0.2
+- Minimal Fluent 风格界面，5 段实时节奏显示。
+- 保留 v0.1.3 的输入钩子、状态机、动作执行与配置结构。
