@@ -14,7 +14,38 @@ internal static class Program
         Directory.CreateDirectory(Path.GetDirectoryName(ico)!);
         File.WriteAllBytes(ico, AppIcon.EncodeIco(IconTone.Active, dark: true, AppIcon.IcoSizes));
         Console.WriteLine("ico: " + ico);
-        if (args.Length > 1) Preview(args[1]);
+        if (args.Length > 1)
+        {
+            Preview(args[1]);
+            TrayPreview(Path.ChangeExtension(args[1], null) + "-tray.png");
+        }
+    }
+
+    /// <summary>Draws the real tray HICONs (the path NotifyIcon uses) on light and dark taskbars, zoomed 8x.</summary>
+    private static void TrayPreview(string path)
+    {
+        var tones = new[] { IconTone.Active, IconTone.Paused, IconTone.Blocked };
+        using var strip = new System.Drawing.Bitmap(3 * 40 + 8, 2 * 32);
+        using (var g = System.Drawing.Graphics.FromImage(strip))
+        {
+            g.Clear(System.Drawing.Color.FromArgb(0xD8, 0xE8, 0xDC));
+            g.FillRectangle(new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(0x20, 0x20, 0x20)), 0, 32, strip.Width, 32);
+            for (int row = 0; row < 2; row++)
+                for (int i = 0; i < tones.Length; i++)
+                {
+                    using var icon = AppIcon.CreateTrayIcon(tones[i], 24);
+                    g.DrawIcon(icon, 8 + i * 40, row * 32 + 4);
+                }
+        }
+        using var zoom = new System.Drawing.Bitmap(strip.Width * 8, strip.Height * 8);
+        using (var g = System.Drawing.Graphics.FromImage(zoom))
+        {
+            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+            g.DrawImage(strip, 0, 0, zoom.Width, zoom.Height);
+        }
+        zoom.Save(path);
+        Console.WriteLine("tray: " + path);
     }
 
     private static void Pixelated(DrawingContext dc, BitmapSource source, Rect rect)

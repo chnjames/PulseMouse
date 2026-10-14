@@ -1,5 +1,4 @@
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -81,20 +80,20 @@ public static class AppIcon
         return bitmap;
     }
 
+    /// <summary>Icons expect straight alpha; feeding premultiplied pixels darkens the anti-aliased rim.</summary>
+    private static BitmapSource Straight(BitmapSource source)
+    {
+        var converted = new FormatConvertedBitmap(source, PixelFormats.Bgra32, null, 0);
+        converted.Freeze();
+        return converted;
+    }
+
     /// <summary>Tray uses the light tile: its colour carries the state, and a dark tile vanishes on a dark taskbar.</summary>
     public static Drawing.Icon CreateTrayIcon(IconTone tone, int size)
     {
-        var source = Render(size, tone);
-        var pixels = new byte[size * size * 4];
-        source.CopyPixels(pixels, size * 4, 0);
-        using var bitmap = new Drawing.Bitmap(size, size, Drawing.Imaging.PixelFormat.Format32bppPArgb);
-        var data = bitmap.LockBits(new Drawing.Rectangle(0, 0, size, size), Drawing.Imaging.ImageLockMode.WriteOnly, bitmap.PixelFormat);
-        Marshal.Copy(pixels, 0, data.Scan0, pixels.Length);
-        bitmap.UnlockBits(data);
-        var handle = bitmap.GetHicon();
-        var icon = (Drawing.Icon)Drawing.Icon.FromHandle(handle).Clone();
-        DestroyIcon(handle);
-        return icon;
+        // Bitmap.GetHicon premultiplies the colours, which darkens the anti-aliased rim; load from .ico bytes instead.
+        using var ms = new MemoryStream(EncodeIco(tone, dark: false, size));
+        return new Drawing.Icon(ms, size, size);
     }
 
     /// <summary>PNG-compressed .ico with one frame per size (supported since Windows Vista).</summary>
@@ -103,7 +102,7 @@ public static class AppIcon
         var frames = sizes.Select(s =>
         {
             var encoder = new PngBitmapEncoder();
-            encoder.Frames.Add(BitmapFrame.Create(Render(s, tone, dark)));
+            encoder.Frames.Add(BitmapFrame.Create(Straight(Render(s, tone, dark))));
             using var png = new MemoryStream();
             encoder.Save(png);
             return (Size: s, Data: png.ToArray());
@@ -125,7 +124,4 @@ public static class AppIcon
         bw.Flush();
         return ms.ToArray();
     }
-
-    [DllImport("user32.dll")]
-    private static extern bool DestroyIcon(nint handle);
 }
