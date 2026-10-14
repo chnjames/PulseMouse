@@ -56,19 +56,21 @@
                         </StackPanel>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="16,0,0,0">
                             <Grid Width="18" Height="18">
-                                <Ellipse>
-                                    <Ellipse.Fill>
-                                        <RadialGradientBrush GradientOrigin="0.35,0.3" Center="0.35,0.3" RadiusX="0.8" RadiusY="0.8">
-                                            <GradientStop Color="#9EFFEE" Offset="0"/>
-                                            <GradientStop Color="#51E6CA" Offset="0.55"/>
-                                            <GradientStop Color="#1F9E87" Offset="1"/>
-                                        </RadialGradientBrush>
-                                    </Ellipse.Fill>
-                                    <Ellipse.Effect>
-                                        <DropShadowEffect Color="#51E6CA" BlurRadius="14" ShadowDepth="0" Opacity="0.35"/>
-                                    </Ellipse.Effect>
-                                </Ellipse>
-                                <Ellipse Width="6.5" Height="6.5" Fill="#07100E"/>
+                                <Border CornerRadius="5">
+                                    <Border.Background>
+                                        <LinearGradientBrush StartPoint="0.2,0" EndPoint="0.8,1">
+                                            <GradientStop Color="#8EF6E2" Offset="0"/>
+                                            <GradientStop Color="#2CC6A9" Offset="1"/>
+                                        </LinearGradientBrush>
+                                    </Border.Background>
+                                    <Border.Effect>
+                                        <DropShadowEffect Color="#51E6CA" BlurRadius="14" ShadowDepth="0" Opacity="0.3"/>
+                                    </Border.Effect>
+                                </Border>
+                                <Canvas>
+                                    <Ellipse Canvas.Left="2" Canvas.Top="7" Width="4" Height="4" Fill="#06120F"/>
+                                    <Rectangle Canvas.Left="8" Canvas.Top="7" Width="8" Height="4" RadiusX="2" RadiusY="2" Fill="#06120F"/>
+                                </Canvas>
                             </Grid>
                             <TextBlock Text="PulseMouse" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                             <Border Margin="10,0,0,0" Padding="7,2" CornerRadius="9" Background="{StaticResource MintDimBrush}"

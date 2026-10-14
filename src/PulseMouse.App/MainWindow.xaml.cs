@@ -23,6 +23,9 @@ public partial class MainWindow : Window, IShell
     private TaskCompletionSource<bool>? _modal;
     private Page _page = Page.Dashboard;
     private bool _exiting;
+    private IconTone _trayTone = IconTone.Active;
+
+    private static int TraySize => Forms.SystemInformation.SmallIconSize.Width;
 
     public PulseController Controller => _controller;
     public DashboardView Dashboard => (DashboardView)View(Page.Dashboard);
@@ -32,7 +35,7 @@ public partial class MainWindow : Window, IShell
     public MainWindow()
     {
         InitializeComponent();
-        Icon = AppIcon.CreateImageSource();
+        Icon = System.Windows.Media.Imaging.BitmapFrame.Create(new Uri("pack://application:,,,/Assets/PulseMouse.ico"));
         _controller = new PulseController(Dispatcher) { Shell = this };
         _controller.StateChanged += RefreshChrome;
         _controller.BindingsChanged += RefreshNavMeta;
@@ -47,7 +50,7 @@ public partial class MainWindow : Window, IShell
         _toastTimer.Tick += (_, _) => { _toastTimer.Stop(); AnimateToast(false); };
 
         _trayToggle = new Forms.ToolStripMenuItem("暂停监听", null, (_, _) => Dispatcher.Invoke(() => _controller.SetEnabled(!_controller.Enabled)));
-        _tray = new Forms.NotifyIcon { Text = "PulseMouse", Icon = AppIcon.CreateTrayIcon(), Visible = true, ContextMenuStrip = new Forms.ContextMenuStrip() };
+        _tray = new Forms.NotifyIcon { Text = "PulseMouse", Icon = AppIcon.CreateTrayIcon(_trayTone, TraySize), Visible = true, ContextMenuStrip = new Forms.ContextMenuStrip() };
         _tray.ContextMenuStrip.Items.Add("打开 PulseMouse", null, (_, _) => Dispatcher.Invoke(RestoreWindow));
         _tray.ContextMenuStrip.Items.Add(_trayToggle);
         _tray.ContextMenuStrip.Items.Add(new Forms.ToolStripSeparator());
@@ -146,7 +149,19 @@ public partial class MainWindow : Window, IShell
         StatusText.Text = on ? Loc.Listening : Loc.StatusPaused;
         StatusInput.Text = _controller.ActiveInputText;
         _trayToggle.Text = on ? "暂停监听" : "恢复监听";
-        _tray.Text = on ? "PulseMouse · 监听中" : "PulseMouse · 已暂停";
+        bool broken = !_controller.HookInstalled || _controller.InjectionBlocked;
+        _tray.Text = !on ? "PulseMouse · 已暂停"
+            : !_controller.HookInstalled ? "PulseMouse · 监听未生效"
+            : _controller.InjectionBlocked ? "PulseMouse · 模拟输入被拦截"
+            : "PulseMouse · 监听中";
+        var tone = !on ? IconTone.Paused : broken ? IconTone.Blocked : IconTone.Active;
+        if (tone != _trayTone)
+        {
+            _trayTone = tone;
+            var old = _tray.Icon;
+            _tray.Icon = AppIcon.CreateTrayIcon(tone, TraySize);
+            old?.Dispose();
+        }
     }
 
     private void EnabledSwitchClick(object sender, RoutedEventArgs e) => _controller.SetEnabled(EnabledSwitch.IsChecked == true);

@@ -37,6 +37,7 @@ public sealed class PulseController : IDisposable
     public string ConfigPath => _store.FilePath;
     public string SavedAt { get; private set; } = "—";
     public bool HookInstalled => _hook.IsInstalled;
+    public bool InjectionBlocked => _hook.InjectionBlocked;
 
     // Live rhythm state shown on the dashboard
     public LivePhase Phase { get; private set; } = LivePhase.Idle;

@@ -5,7 +5,11 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PulseMouse</AssemblyName>
     <Version>0.8.0</Version>
+    <ApplicationIcon>Assets\PulseMouse.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Resource Include="Assets\PulseMouse.ico" />
+  </ItemGroup>
   <ItemGroup>
     <Using Remove="System.Windows.Forms" />
     <Using Remove="System.Drawing" />
