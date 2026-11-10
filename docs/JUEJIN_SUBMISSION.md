@@ -36,13 +36,13 @@ v0.9 的核心是 **Context Pulse**。PulseMouse 会在开始输入时记录光�
 
 ## 体验链接
 
-发布后填写：`https://github.com/chnjames/PulseMouse/releases/tag/v0.9.0`
+体验链接：<https://github.com/chnjames/PulseMouse/releases/tag/v0.9.0>
 
-该链接要在 GitHub 仓库创建、代码推送并建立 `v0.9.0` 预发布 Release 后再提交；当前不要填写不存在的体验链接。
+这是源码预发布链接。用户可下载 GitHub 自动提供的 Source code，按照 README 使用 .NET 10 SDK 构建。便携版 Windows 附件会在网络恢复后补传，不要将其标注为已有下载包。
 
 ## 代码仓库
 
-发布后填写：`https://github.com/chnjames/PulseMouse`
+代码仓库：<https://github.com/chnjames/PulseMouse>
 
 仓库建议为公开仓库，描述为：
 
