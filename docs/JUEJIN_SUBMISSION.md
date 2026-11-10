@@ -28,15 +28,13 @@ v0.9 的核心是 **Context Pulse**。PulseMouse 会在开始输入时记录光�
 
 ## 介绍图片（最多 5 张）
 
-按以下顺序上传；这 5 张都是正在运行的 `v0.9.0` 应用实机截图，而不是设计稿或生成的 UI：
+按以下顺序上传；第 1 张是功能与架构总览，后 4 张均为正在运行的 `v0.9.0` 应用实机截图：
 
-1. [`docs/assets/screenshots/01-dashboard.jpg`](assets/screenshots/01-dashboard.jpg) — **仪表盘**：一眼看出“按住右键、左键输入点划节奏、松开执行”的实时输入区，以及已绑定动作和输入方式。
-2. [`docs/assets/screenshots/02-commands.jpg`](assets/screenshots/02-commands.jpg) — **指令库**：展示节奏地图、`·` / `—` 输入、动作类型和 `Ctrl+C` 等实际绑定。
-3. [`docs/assets/screenshots/03-gestures.jpg`](assets/screenshots/03-gestures.jpg) — **方向手势**：展示中键上下左右手势、动作绑定和阈值设置。
-4. [`docs/assets/screenshots/04-workflows.jpg`](assets/screenshots/04-workflows.jpg) — **工作流**：展示最多 12 步的本地自动化编辑器与执行前确认机制。
+1. [`docs/assets/pulsemouse-cover.png`](assets/pulsemouse-cover.png) — **功能与架构总览**：说明“鼠标节奏输入 → 识别与安全回退 → Context Pulse 按程序分流 → 动作与反馈”的完整链路，以及本地优先、无账号、无遥测等特性。
+2. [`docs/assets/screenshots/01-dashboard.jpg`](assets/screenshots/01-dashboard.jpg) — **仪表盘**：展示“按住右键、左键输入点划节奏、松开执行”的实时输入区，以及已绑定动作和输入方式。
+3. [`docs/assets/screenshots/02-commands.jpg`](assets/screenshots/02-commands.jpg) — **指令库**：展示节奏地图、`·` / `—` 输入、动作类型和 `Ctrl+C` 等实际绑定。
+4. [`docs/assets/screenshots/03-gestures.jpg`](assets/screenshots/03-gestures.jpg) — **方向手势**：展示中键上下左右手势、动作绑定和阈值设置。
 5. [`docs/assets/screenshots/05-settings.jpg`](assets/screenshots/05-settings.jpg) — **设置**：展示按程序切换含义、屏幕状态胶囊、隐私本地化与备份导入导出。
-
-不要把 [`docs/assets/pulsemouse-cover.png`](assets/pulsemouse-cover.png) 当作介绍图上传；它只是品牌概念封面，不能充分说明产品。
 
 ## 体验链接
 

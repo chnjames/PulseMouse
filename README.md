@@ -24,7 +24,7 @@ Launchers and menus are great when you need to discover an action. PulseMouse is
 | **Workflow builder** | **Settings and safety controls** |
 | ![The workflow builder shows confirmation-first multi-step automation](docs/assets/screenshots/04-workflows.jpg) | ![Settings show Context Pulse, on-screen feedback, and backup controls](docs/assets/screenshots/05-settings.jpg) |
 
-All screenshots above are captured from the running `v0.9.0` application. The [concept cover](docs/assets/pulsemouse-cover.png) is retained as brand artwork only; it is not a product UI screenshot.
+All screenshots above are captured from the running `v0.9.0` application. The [feature-and-architecture overview](docs/assets/pulsemouse-cover.png) explains the product flow; it is not a product UI screenshot.
 
 ## Highlights
 

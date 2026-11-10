@@ -24,7 +24,7 @@
 | **工作流编辑器** | **设置与安全控制** |
 | ![工作流编辑器：确认后执行多步骤自动化](docs/assets/screenshots/04-workflows.jpg) | ![设置：按程序切换含义、屏幕反馈和备份控制](docs/assets/screenshots/05-settings.jpg) |
 
-以上均为正在运行的 `v0.9.0` 应用实机截图。 [概念主视觉](docs/assets/pulsemouse-cover.png) 仅作为品牌封面，不再用于说明产品界面或功能。
+以上均为正在运行的 `v0.9.0` 应用实机截图。 [功能与架构总览](docs/assets/pulsemouse-cover.png) 用于说明产品链路；它不是产品界面截图。
 
 ## 核心能力
 
