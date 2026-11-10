@@ -7,6 +7,8 @@ public static class ActionRunner
     public static void Run(CommandBinding binding) => Run(binding, false);
     public static void Run(CommandBinding binding, bool workflowAuthorized)
     {
+        if (binding.ActionKind == ActionKind.Repeat)
+            throw new InvalidOperationException("「重复上一次」应由上层展开后再执行。");
         if (string.IsNullOrWhiteSpace(binding.Target)) throw new ArgumentException("动作目标不能为空。");
         string target = binding.Target.Trim();
         if (binding.ActionKind == ActionKind.Workflow)

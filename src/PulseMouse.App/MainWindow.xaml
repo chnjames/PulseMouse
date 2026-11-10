@@ -75,7 +75,7 @@
                             <TextBlock Text="PulseMouse" FontSize="12.5" FontWeight="SemiBold" VerticalAlignment="Center" Margin="10,0,0,0"/>
                             <Border Margin="10,0,0,0" Padding="7,2" CornerRadius="9" Background="{StaticResource MintDimBrush}"
                                     BorderBrush="{StaticResource MintLine20Brush}" BorderThickness="1" VerticalAlignment="Center">
-                                <TextBlock x:Name="VersionText" Text="v0.8" FontFamily="{StaticResource MonoFont}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MintBrush}"/>
+                                <TextBlock x:Name="VersionText" Text="v0.9.0" FontFamily="{StaticResource MonoFont}" FontSize="10" FontWeight="SemiBold" Foreground="{StaticResource MintBrush}"/>
                             </Border>
                         </StackPanel>
                     </DockPanel>

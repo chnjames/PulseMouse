@@ -62,23 +62,66 @@
                             </StackPanel>
                         </Grid>
                     </Grid>
-                    <Border Style="{StaticResource SRowLast}" BorderThickness="0,1,0,0">
+                    <Border Style="{StaticResource SRow}" BorderThickness="0,1,0,0">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
                                 <Slider x:Name="DistanceSlider" Style="{StaticResource Range}" Minimum="25" Maximum="500" TickFrequency="5" ValueChanged="DistanceChanged"/>
                                 <TextBlock x:Name="DistanceText" Style="{StaticResource Val}" Margin="10,0,0,0"/>
                             </StackPanel>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="最小移动距离"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="移动距离小于此值时不触发手势，避免与中键点击冲突"/>
+                                <TextBlock x:Name="DistanceName" Style="{StaticResource RowName}" Text="最小移动距离"/>
+                                <TextBlock x:Name="DistanceDesc" Style="{StaticResource RowDesc}" Text="按下后拖动达到此距离 = 方向手势"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
-                    <Border Style="{StaticResource Note}" Margin="0,4,0,0">
+                    <Border Style="{StaticResource SRow}" BorderThickness="0,1,0,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                                <Slider x:Name="ClickMaxSlider" Style="{StaticResource Range}" Minimum="200" Maximum="800" TickFrequency="10" ValueChanged="ClickMaxChanged"/>
+                                <TextBlock x:Name="ClickMaxText" Style="{StaticResource Val}" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="ClickMaxName" Style="{StaticResource RowName}" Text="单击上限"/>
+                                <TextBlock x:Name="ClickMaxDesc" Style="{StaticResource RowDesc}" Text="静止且短于此时长松开 → 补发系统中键单击"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SRow}" BorderThickness="0,1,0,0">
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center" Margin="20,0,0,0">
+                                <Slider x:Name="PassThroughSlider" Style="{StaticResource Range}" Minimum="0" Maximum="1500" TickFrequency="50" ValueChanged="PassThroughChanged"/>
+                                <TextBlock x:Name="PassThroughText" Style="{StaticResource Val}" Margin="10,0,0,0"/>
+                            </StackPanel>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="PassThroughName" Style="{StaticResource RowName}" Text="静止放行"/>
+                                <TextBlock x:Name="PassThroughDesc" Style="{StaticResource RowDesc}" Text="静止按住达到此时长 → 交给系统；0 = 关闭"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource SRowLast}" BorderThickness="0,1,0,0">
+                        <DockPanel>
+                            <ToggleButton x:Name="PreserveSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" VerticalAlignment="Center" Margin="20,0,0,0" Click="PreserveClick"/>
+                            <StackPanel VerticalAlignment="Center">
+                                <TextBlock x:Name="PreserveName" Style="{StaticResource RowName}" Text="保留中键单击"/>
+                                <TextBlock x:Name="PreserveDesc" Style="{StaticResource RowDesc}" Text="关闭后短点也不补发（进阶）"/>
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Note}" Margin="0,8,0,0">
                         <DockPanel>
                             <c:Icon Kind="Info" Size="14" Foreground="{StaticResource Text3Brush}" VerticalAlignment="Top" Margin="0,2,9,0"/>
-                            <TextBlock FontSize="11.5" Foreground="{StaticResource Text3Brush}" TextWrapping="Wrap" LineHeight="18"
-                                       Text="中键原始事件仍会透传给当前应用。若浏览器出现自动滚动，可把手势距离调大，或在「输入方式」中改用侧键。"/>
+                            <TextBlock x:Name="DecisionNote" FontSize="11.5" Foreground="{StaticResource Text3Brush}" TextWrapping="Wrap" LineHeight="18"
+                                       Text="短点仍是系统中键；按下就拖是手势，不会带动页面滚动；静止按住一会儿再拖，仍是系统的自动滚动或平移。"/>
+                        </DockPanel>
+                    </Border>
+                    <Border Style="{StaticResource Note}" Margin="0,8,0,0" Background="{StaticResource AmberDimBrush}">
+                        <DockPanel>
+                            <c:Icon Kind="Alert" Size="14" Foreground="{StaticResource AmberBrush}" VerticalAlignment="Top" Margin="0,2,9,0"/>
+                            <TextBlock FontSize="11.5" Foreground="{StaticResource AmberBrush}" TextWrapping="Wrap" LineHeight="18">
+                                <Run x:Name="CadNoteRun" Text="CAD、Blender、Figma 等按下中键就拖动平移的程序：平移会变成手势。建议加入"/>
+                                <Hyperlink Click="ExcludedLinkClick"><Run x:Name="ExcludedLinkRun" Text="排除的程序"/></Hyperlink>
+                                <Run x:Name="CadNoteTailRun" Text="，或先静止按住再拖。"/>
+                            </TextBlock>
                         </DockPanel>
                     </Border>
                 </StackPanel>

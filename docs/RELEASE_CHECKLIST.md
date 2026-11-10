@@ -1,12 +1,13 @@
 # 真机验收清单
 
-适用于当前版本（v0.8.0 及其后未发布的改动）。自动化只覆盖 `PulseMouse.Core` 的冒烟测试；鼠标钩子、补发输入和界面必须在真机上手工验证。
+适用于 `v0.9.0` 预发布版。自动化覆盖 Core 逻辑与配置迁移；鼠标钩子、补发输入、窗口激活和界面仍必须在真机上手工验证。未完成的项目不得在 GitHub Release 中声明为已验证。
 
 ## 准备
 
 ```powershell
-dotnet build PulseMouse.slnx -c Release
-dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
+dotnet restore PulseMouse.slnx
+dotnet build PulseMouse.slnx -c Release --no-restore
+dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release --no-build
 ```
 
 - 完全退出旧实例（托盘 → 退出），在资源管理器中双击 `src\PulseMouse.App\bin\Release\net10.0-windows\PulseMouse.exe`。
@@ -36,12 +37,12 @@ dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
 - [ ] 设置页“重新检测”后回到右键和弦。
 - [ ] 手动选择 X1 / X2：对应侧键用于节奏，另一个侧键的后退 / 前进不受影响。
 
-## 中键模式与方向手势
+## 中键与方向手势
 
-- [ ] 静止长按中键 550 ms 后松开，7 秒内用左键敲 `..`，停顿后执行。
-- [ ] 长按中键时移动超过 12 px：不激活。
-- [ ] 激活后不操作：7 秒后自动退出，左键恢复正常。
-- [ ] 按住中键向上 / 右拖动超过 75 px：执行对应手势（中键模式与右键和弦下均可）。
+- [ ] 短按静止中键：系统原生中键单击正常。
+- [ ] 静止按住中键：约 600 ms 后原样放行给系统，浏览器自动滚动 / CAD 平移正常。
+- [ ] 按住中键向上 / 右拖动超过 75 px：只执行对应手势，不误触自动滚动。
+- [ ] 经典中键模式：静止长按约 550 ms 后松开，7 秒内用左键敲 `..`，停顿后执行；超时后左键恢复正常。
 
 ## 动作
 
@@ -49,6 +50,15 @@ dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
 - [ ] 快捷键发往管理员权限窗口：不生效，但 PulseMouse 不崩溃、不卡住修饰键。
 - [ ] 程序（含 `.lnk`）、文件夹、https 网址正常打开。
 - [ ] 工作流：执行前弹出确认；拒绝则不执行任何步骤。
+
+## Context Pulse
+
+- [ ] 在 Chrome 为同一节奏设置程序含义，在其他程序仍执行全局含义。
+- [ ] 固定的全局节奏不能被程序含义占用。
+- [ ] 光标在桌面 / 任务栏时只解析全局含义；资源管理器文件窗口可使用 `explorer` 含义。
+- [ ] 发送快捷键前激活光标下的目标窗口；窗口已关闭或切换失败时不发送。
+- [ ] 「重复上一次」可重放最近的成功动作；原窗口已关闭时给出失败反馈。
+- [ ] 旧 v0.8 配置启动后迁移到 Schema 9，指令与统计保留；导出再导入含程序列表。
 
 ## 界面与设置
 

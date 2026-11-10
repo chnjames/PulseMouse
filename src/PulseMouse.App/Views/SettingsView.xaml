@@ -1,7 +1,8 @@
 <UserControl x:Class="PulseMouse.App.Views.SettingsView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:c="clr-namespace:PulseMouse.App.Controls">
+             xmlns:c="clr-namespace:PulseMouse.App.Controls"
+             SizeChanged="OnViewSizeChanged">
     <UserControl.Resources>
         <Style x:Key="GroupTitle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="12"/>
@@ -10,196 +11,268 @@
             <Setter Property="VerticalAlignment" Value="Center"/>
         </Style>
     </UserControl.Resources>
-    <StackPanel>
-        <c:PageHeader x:Name="Header">
-            <Button Style="{StaticResource Btn}" c:Ui.Icon="Folder" Content="打开配置文件夹" Click="OpenConfigClick"/>
-        </c:PageHeader>
+    <!-- Full-width host so MaxWidth+Center actually centers in the content pane when maximized. -->
+    <Grid>
+        <DockPanel x:Name="ShellColumn" MaxWidth="640" HorizontalAlignment="Center" VerticalAlignment="Top">
+            <c:PageHeader x:Name="Header" DockPanel.Dock="Top">
+                <Button x:Name="OpenConfigButton" Style="{StaticResource Btn}" c:Ui.Icon="Folder" Content="打开配置文件夹" Click="OpenConfigClick"/>
+            </c:PageHeader>
 
-        <StackPanel MaxWidth="840" HorizontalAlignment="Left" Width="840">
-            <!-- general -->
-            <TextBlock Style="{StaticResource GroupTitle}" Text="通用" Margin="2,0,2,8"/>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <StackPanel>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="StartupSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="StartupClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="开机自启动"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="Windows 登录后自动运行 PulseMouse（写入当前用户启动项，无需管理员权限）"/>
+            <Grid x:Name="LayoutRoot">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid x:Name="Columns">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition x:Name="ColLeft" Width="*"/>
+                        <ColumnDefinition x:Name="ColGap" Width="0"/>
+                        <ColumnDefinition x:Name="ColRight" Width="0"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel x:Name="LeftCol" Grid.Column="0"/>
+                    <StackPanel x:Name="RightCol" Grid.Column="2"/>
+                </Grid>
+                <StackPanel x:Name="TimingHost" Grid.Row="1"/>
+            </Grid>
+        </DockPanel>
+
+        <!-- Section definitions live here until reparented into Left/Right/Timing. -->
+        <StackPanel x:Name="SectionPool" Visibility="Collapsed" IsHitTestVisible="False">
+            <StackPanel x:Name="SecGeneral" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleGeneral" Style="{StaticResource GroupTitle}" Text="通用" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="StartupSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="StartupClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowStartup" Style="{StaticResource RowName}" Text="开机自启动"/>
+                                    <TextBlock x:Name="DescStartup" Style="{StaticResource RowDesc}" Text="Windows 登录后自动运行 PulseMouse（写入当前用户启动项，无需管理员权限）"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="SoundSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowSound" Style="{StaticResource RowName}" Text="执行成功提示音"/>
+                                    <TextBlock x:Name="DescSound" Style="{StaticResource RowDesc}" Text="指令成功发起后播放系统轻提示音"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRowLast}">
+                            <DockPanel>
+                                <ListBox x:Name="LanguageSeg" DockPanel.Dock="Right" Style="{StaticResource Seg}" Margin="20,0,0,0" SelectionChanged="LanguageChanged">
+                                    <ListBoxItem Content="中文"/>
+                                    <ListBoxItem Content="English"/>
+                                </ListBox>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowLanguage" Style="{StaticResource RowName}" Text="语言 / Language"/>
+                                    <TextBlock x:Name="DescLanguage" Style="{StaticResource RowDesc}" Text="切换全部界面文案；你起的指令名称保持不变"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
+
+            <StackPanel x:Name="SecContext" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleContext" Style="{StaticResource GroupTitle}" Text="情境 · Context Pulse" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="ContextSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowContext" Style="{StaticResource RowName}" Text="按程序切换含义"/>
+                                    <TextBlock x:Name="DescContext" Style="{StaticResource RowDesc}" Text="光标所在程序给某个节奏定义了自己的含义时使用它；关闭后只用全局含义"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="RemindSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowRemind" Style="{StaticResource RowName}" Text="新含义提醒"/>
+                                    <TextBlock x:Name="DescRemind" Style="{StaticResource RowDesc}" Text="替换了全局含义后，前 5 次使用时胶囊提示"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="CapsuleContextSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowCapsuleContext" Style="{StaticResource RowName}" Text="胶囊显示当前程序"/>
+                                    <TextBlock x:Name="DescCapsuleContext" Style="{StaticResource RowDesc}" Text="胶囊显示光标下的程序及含义来源"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRowLast}">
+                            <DockPanel>
+                                <ToggleButton x:Name="ActivateSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowActivate" Style="{StaticResource RowName}" Text="发送快捷键前激活光标下的窗口"/>
+                                    <TextBlock x:Name="DescActivate" Style="{StaticResource RowDesc}" Text="保证快捷键作用在指着的窗口；关闭后发到当前前台"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
+
+            <StackPanel x:Name="SecMouse" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleMouse" Style="{StaticResource GroupTitle}" Text="鼠标拦截" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="FullscreenSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowFullscreen" Style="{StaticResource RowName}" Text="全屏时暂停"/>
+                                    <TextBlock x:Name="DescFullscreen" Style="{StaticResource RowDesc}" Text="前台是全屏游戏、演示或视频时，不拦截任何鼠标按键"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <StackPanel>
+                                <TextBlock x:Name="RowExcluded" Style="{StaticResource RowName}" Text="排除的程序"/>
+                                <TextBlock x:Name="DescExcluded" Style="{StaticResource RowDesc}" Text="光标位于这些程序的窗口上时完全不拦截（填写进程名，用逗号分隔）。管理员权限窗口会自动放行右键。"/>
+                                <TextBox x:Name="ExcludedBox" Style="{StaticResource InputMono}" Margin="0,10,0,0" c:Ui.Placeholder="例如：cs2, blender, acad" LostKeyboardFocus="ExcludedLostFocus"/>
                             </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="SoundSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="执行成功提示音"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="指令成功发起后播放系统轻提示音"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
+                        </Border>
+                        <Border Style="{StaticResource SRowLast}">
+                            <DockPanel>
+                                <Button x:Name="RedetectButton" DockPanel.Dock="Right" Style="{StaticResource Btn}" c:Ui.Icon="Refresh" c:Ui.IconSize="14" Content="重新检测" Margin="20,0,0,0" Click="RedetectClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowSide" Style="{StaticResource RowName}" Text="侧键检测"/>
+                                    <TextBlock x:Name="SideText" Style="{StaticResource RowDesc}"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
+
+            <StackPanel x:Name="SecCapsule" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleCapsule" Style="{StaticResource GroupTitle}" Text="Pulse Capsule · 屏幕状态胶囊" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="CapsuleSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowCapsule" Style="{StaticResource RowName}" Text="启用状态胶囊"/>
+                                    <TextBlock x:Name="DescCapsule" Style="{StaticResource RowDesc}" Text="在鼠标所在屏幕的任务栏上方显示识别状态，不抢焦点、可点击穿透"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
+                                    <RadioButton x:Name="PosLeft" Style="{StaticResource PosButton}" Content="左下" Tag="Left" Padding="5,0,0,4" HorizontalContentAlignment="Left" Checked="PositionChecked"/>
+                                    <RadioButton x:Name="PosCenter" Style="{StaticResource PosButton}" Content="底部居中" Tag="Center" Padding="0,0,0,4" HorizontalContentAlignment="Center" Checked="PositionChecked"/>
+                                    <RadioButton x:Name="PosRight" Style="{StaticResource PosButton}" Content="右下" Tag="Right" Padding="0,0,5,4" HorizontalContentAlignment="Right" Margin="0" Checked="PositionChecked"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowPosition" Style="{StaticResource RowName}" Text="胶囊位置"/>
+                                    <TextBlock x:Name="DescPosition" Style="{StaticResource RowDesc}" Text="选择状态胶囊的停靠位置"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="BreathingSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowBreathing" Style="{StaticResource RowName}" Text="呼吸动画"/>
+                                    <TextBlock x:Name="DescBreathing" Style="{StaticResource RowDesc}" Text="激活与输入期间使用缓慢呼吸反馈"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="HintSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="14,0,0,0" Click="ToggleClick"/>
+                                <Button x:Name="PreviewHintButton" DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Play" c:Ui.IconSize="13" Content="预览" Margin="20,0,0,0" Click="PreviewHintClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowHint" Style="{StaticResource RowName}" Text="犹豫时显示节奏清单"/>
+                                    <TextBlock x:Name="DescHint" Style="{StaticResource RowDesc}" Text="按住右键或敲到一半停顿 0.6 秒，在胶囊上方列出还能匹配的指令"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRowLast}">
+                            <DockPanel>
+                                <Button x:Name="PreviewCapsuleButton" DockPanel.Dock="Right" Style="{StaticResource Btn}" c:Ui.Icon="Play" c:Ui.IconSize="14" Content="预览胶囊" Margin="20,0,0,0" Click="PreviewClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowPreview" Style="{StaticResource RowName}" Text="预览"/>
+                                    <TextBlock x:Name="DescPreview" Style="{StaticResource RowDesc}" Text="在屏幕上显示一次「已匹配」状态"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
+
+            <StackPanel x:Name="SecSafety" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleSafety" Style="{StaticResource GroupTitle}" Text="安全与数据" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border Style="{StaticResource SRow}">
+                            <DockPanel>
+                                <ToggleButton x:Name="ConfirmSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowConfirm" Style="{StaticResource RowName}" Text="工作流执行前确认"/>
+                                    <TextBlock x:Name="DescConfirm" Style="{StaticResource RowDesc}" Text="运行多步骤动作前显示确认对话框"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                        <Border Style="{StaticResource SRowLast}">
+                            <DockPanel>
+                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
+                                    <Button x:Name="ExportButton" Style="{StaticResource Btn}" c:Ui.Icon="Download" c:Ui.IconSize="14" Content="导出" Margin="0,0,10,0" Click="ExportClick"/>
+                                    <Button x:Name="ImportButton" Style="{StaticResource Btn}" c:Ui.Icon="Upload" c:Ui.IconSize="14" Content="导入" Click="ImportClick"/>
+                                </StackPanel>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="RowBackup" Style="{StaticResource RowName}" Text="配置备份"/>
+                                    <TextBlock x:Name="DescBackup" Style="{StaticResource RowDesc}" Text="导出或恢复指令、手势与偏好（JSON，含版本号与情境）"/>
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
+
+            <StackPanel x:Name="SecAi" Margin="0,0,0,20">
+                <TextBlock x:Name="TitleAi" Style="{StaticResource GroupTitle}" Text="AI 入口 · 可选" Margin="2,0,2,8"/>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
                     <Border Style="{StaticResource SRowLast}">
-                        <DockPanel>
-                            <ListBox x:Name="LanguageSeg" DockPanel.Dock="Right" Style="{StaticResource Seg}" Margin="20,0,0,0" SelectionChanged="LanguageChanged">
-                                <ListBoxItem Content="中文"/>
-                                <ListBoxItem Content="English"/>
-                            </ListBox>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="语言 / Language"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="切换导航、页面标题与状态栏"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                </StackPanel>
-            </ContentControl>
-
-            <!-- interception -->
-            <TextBlock Style="{StaticResource GroupTitle}" Text="鼠标拦截" Margin="2,0,2,8"/>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <StackPanel>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="FullscreenSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="全屏时暂停"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="前台是全屏游戏、演示或视频时，不拦截任何鼠标按键"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRow}">
-                        <StackPanel>
-                            <TextBlock Style="{StaticResource RowName}" Text="排除的程序"/>
-                            <TextBlock Style="{StaticResource RowDesc}" Text="光标位于这些程序的窗口上时完全不拦截（填写进程名，用逗号分隔）。管理员权限窗口会自动放行右键。"/>
-                            <TextBox x:Name="ExcludedBox" Style="{StaticResource InputMono}" Margin="0,10,0,0" c:Ui.Placeholder="例如：cs2, blender, acad" LostKeyboardFocus="ExcludedLostFocus"/>
-                        </StackPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRowLast}">
-                        <DockPanel>
-                            <Button x:Name="RedetectButton" DockPanel.Dock="Right" Style="{StaticResource Btn}" c:Ui.Icon="Refresh" c:Ui.IconSize="14" Content="重新检测" Margin="20,0,0,0" Click="RedetectClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="侧键检测"/>
-                                <TextBlock x:Name="SideText" Style="{StaticResource RowDesc}"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                </StackPanel>
-            </ContentControl>
-
-            <!-- timing -->
-            <DockPanel Margin="2,0,2,8">
-                <Button DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Refresh" c:Ui.IconSize="13" Content="恢复默认" Click="ResetTimingClick"/>
-                <TextBlock Style="{StaticResource GroupTitle}" Text="节奏识别"/>
-            </DockPanel>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <StackPanel>
-                    <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,10,0,16">
-                        <c:TimingRuler x:Name="Ruler"/>
-                    </Border>
-                    <StackPanel x:Name="TimingRows"/>
-                </StackPanel>
-            </ContentControl>
-
-            <!-- capsule -->
-            <TextBlock Style="{StaticResource GroupTitle}" Text="Pulse Capsule · 屏幕状态胶囊" Margin="2,0,2,8"/>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <StackPanel>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="CapsuleSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="启用状态胶囊"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="在鼠标所在屏幕的任务栏上方显示识别状态，不抢焦点、可点击穿透"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRow}">
                         <DockPanel>
                             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
-                                <RadioButton x:Name="PosLeft" Style="{StaticResource PosButton}" Content="左下" Tag="Left" Padding="5,0,0,4" HorizontalContentAlignment="Left" Checked="PositionChecked"/>
-                                <RadioButton x:Name="PosCenter" Style="{StaticResource PosButton}" Content="底部居中" Tag="Center" Padding="0,0,0,4" HorizontalContentAlignment="Center" Checked="PositionChecked"/>
-                                <RadioButton x:Name="PosRight" Style="{StaticResource PosButton}" Content="右下" Tag="Right" Padding="0,0,5,4" HorizontalContentAlignment="Right" Margin="0" Checked="PositionChecked"/>
+                                <TextBox x:Name="AiUrlBox" Style="{StaticResource InputMono}" Width="220" Margin="0,0,10,0" TextChanged="AiUrlChanged"/>
+                                <Button x:Name="OpenAiButton" Style="{StaticResource Btn}" c:Ui.Icon="External" c:Ui.IconSize="14" Content="打开" Click="OpenAiClick"/>
                             </StackPanel>
                             <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="胶囊位置"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="选择状态胶囊的停靠位置"/>
+                                <TextBlock x:Name="RowAi" Style="{StaticResource RowName}" Text="AI 网页地址"/>
+                                <TextBlock x:Name="DescAi" Style="{StaticResource RowDesc}" Text="只打开指定的 HTTPS 页面，不读取或上传屏幕内容"/>
                             </StackPanel>
                         </DockPanel>
                     </Border>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="BreathingSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="呼吸动画"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="激活与输入期间使用缓慢呼吸反馈"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="HintSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="14,0,0,0" Click="ToggleClick"/>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Play" c:Ui.IconSize="13" Content="预览" Margin="20,0,0,0" Click="PreviewHintClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="犹豫时显示节奏清单"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="按住右键或敲到一半停顿 0.6 秒，在胶囊上方列出还能匹配的指令"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRowLast}">
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Style="{StaticResource Btn}" c:Ui.Icon="Play" c:Ui.IconSize="14" Content="预览胶囊" Margin="20,0,0,0" Click="PreviewClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="预览"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="在屏幕上显示一次「已匹配」状态"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                </StackPanel>
-            </ContentControl>
+                </ContentControl>
+            </StackPanel>
 
-            <!-- safety & data -->
-            <TextBlock Style="{StaticResource GroupTitle}" Text="安全与数据" Margin="2,0,2,8"/>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <StackPanel>
-                    <Border Style="{StaticResource SRow}">
-                        <DockPanel>
-                            <ToggleButton x:Name="ConfirmSwitch" DockPanel.Dock="Right" Style="{StaticResource Switch}" Margin="20,0,0,0" Click="ToggleClick"/>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="工作流执行前确认"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="运行多步骤动作前显示确认对话框"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                    <Border Style="{StaticResource SRowLast}">
-                        <DockPanel>
-                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
-                                <Button Style="{StaticResource Btn}" c:Ui.Icon="Download" c:Ui.IconSize="14" Content="导出" Margin="0,0,10,0" Click="ExportClick"/>
-                                <Button Style="{StaticResource Btn}" c:Ui.Icon="Upload" c:Ui.IconSize="14" Content="导入" Click="ImportClick"/>
-                            </StackPanel>
-                            <StackPanel VerticalAlignment="Center">
-                                <TextBlock Style="{StaticResource RowName}" Text="配置备份"/>
-                                <TextBlock Style="{StaticResource RowDesc}" Text="导出或恢复指令、手势与偏好（JSON，含版本号）"/>
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                </StackPanel>
-            </ContentControl>
-
-            <!-- AI -->
-            <TextBlock Style="{StaticResource GroupTitle}" Text="AI 入口 · 可选" Margin="2,0,2,8"/>
-            <ContentControl Style="{StaticResource Card}" Padding="18,2" Margin="0,0,0,20">
-                <Border Style="{StaticResource SRowLast}">
-                    <DockPanel>
-                        <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Margin="20,0,0,0">
-                            <TextBox x:Name="AiUrlBox" Style="{StaticResource InputMono}" Width="260" Margin="0,0,10,0" TextChanged="AiUrlChanged"/>
-                            <Button Style="{StaticResource Btn}" c:Ui.Icon="External" c:Ui.IconSize="14" Content="打开" Click="OpenAiClick"/>
-                        </StackPanel>
-                        <StackPanel VerticalAlignment="Center">
-                            <TextBlock Style="{StaticResource RowName}" Text="AI 网页地址"/>
-                            <TextBlock Style="{StaticResource RowDesc}" Text="只打开指定的 HTTPS 页面，不读取或上传屏幕内容"/>
-                        </StackPanel>
-                    </DockPanel>
-                </Border>
-            </ContentControl>
+            <StackPanel x:Name="SecTiming" Margin="0,0,0,20">
+                <DockPanel Margin="2,0,2,8">
+                    <Button x:Name="ResetTimingButton" DockPanel.Dock="Right" Style="{StaticResource BtnSmGhost}" c:Ui.Icon="Refresh" c:Ui.IconSize="13" Content="恢复默认" Click="ResetTimingClick"/>
+                    <TextBlock x:Name="TitleTiming" Style="{StaticResource GroupTitle}" Text="节奏识别"/>
+                </DockPanel>
+                <ContentControl Style="{StaticResource Card}" Padding="18,2">
+                    <StackPanel>
+                        <Border BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1" Padding="0,10,0,16">
+                            <c:TimingRuler x:Name="Ruler"/>
+                        </Border>
+                        <!-- Slider rows stay readable on the dual-column full-bleed timing card. -->
+                        <StackPanel x:Name="TimingRows" MaxWidth="640" HorizontalAlignment="Left"/>
+                    </StackPanel>
+                </ContentControl>
+            </StackPanel>
         </StackPanel>
-    </StackPanel>
+    </Grid>
 </UserControl>

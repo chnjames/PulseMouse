@@ -139,21 +139,34 @@ public partial class MainWindow : Window, IShell
         Ui.SetMeta(NavWorkflows, s.Commands.Count(c => c.ActionKind == ActionKind.Workflow).ToString());
     }
 
+    /// <summary>Called from settings toggles so the sidebar reflects Context Pulse state.</summary>
+    public void RefreshChromePublic() => RefreshChrome();
+
     private void RefreshChrome()
     {
         bool on = _controller.Enabled;
         EngineDot.IsOn = StatusDot.IsOn = on;
         EnabledSwitch.IsChecked = on;
         EngineText.Text = on ? Loc.Listening : Loc.Paused;
-        EngineSub.Text = _controller.ActiveInputText + "\n" + (_controller.HookInstalled ? Loc.HookInstalled : Loc.HookMissing);
+        string contextLine = _controller.Settings.ContextEnabled
+            ? Loc.T($"按程序切换含义 · {_controller.Settings.ContextApps.Count} 个程序",
+                $"Per-app meanings · {_controller.Settings.ContextApps.Count} apps")
+            : Loc.T("按程序切换已关闭", "Per-app meanings off");
+        EngineSub.Text = _controller.ActiveInputText + "\n" + contextLine + "\n"
+            + (_controller.HookInstalled ? Loc.HookInstalled : Loc.HookMissing);
         StatusText.Text = on ? Loc.Listening : Loc.StatusPaused;
-        StatusInput.Text = _controller.ActiveInputText;
-        _trayToggle.Text = on ? "暂停监听" : "恢复监听";
+        string recent = _controller.RecentProcess;
+        StatusInput.Text = recent.Length == 0
+            ? _controller.ActiveInputText
+            : _controller.Settings.Commands.Count(c => c.Scope.Equals(recent, StringComparison.OrdinalIgnoreCase)) is int own && own > 0
+                ? Loc.T($"最近输入：{recent} · {own} 个节奏有专属含义", $"Recent: {recent} · {own} own rhythms")
+                : Loc.T($"最近输入：{recent} · 全部沿用全局", $"Recent: {recent} · all global");
+        _trayToggle.Text = on ? Loc.T("暂停监听", "Pause listening") : Loc.T("恢复监听", "Resume listening");
         bool broken = !_controller.HookInstalled || _controller.InjectionBlocked;
-        _tray.Text = !on ? "PulseMouse · 已暂停"
-            : !_controller.HookInstalled ? "PulseMouse · 监听未生效"
-            : _controller.InjectionBlocked ? "PulseMouse · 模拟输入被拦截"
-            : "PulseMouse · 监听中";
+        _tray.Text = !on ? Loc.T("PulseMouse · 已暂停", "PulseMouse · paused")
+            : !_controller.HookInstalled ? Loc.T("PulseMouse · 监听未生效", "PulseMouse · hook inactive")
+            : _controller.InjectionBlocked ? Loc.T("PulseMouse · 模拟输入被拦截", "PulseMouse · injection blocked")
+            : Loc.T("PulseMouse · 监听中", "PulseMouse · listening");
         var tone = !on ? IconTone.Paused : broken ? IconTone.Blocked : IconTone.Active;
         if (tone != _trayTone)
         {

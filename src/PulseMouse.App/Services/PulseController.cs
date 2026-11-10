@@ -24,6 +24,8 @@ public sealed class PulseController : IDisposable
     private readonly DispatcherTimer _saveTimer;
     private readonly Dispatcher _dispatcher;
     private readonly Stopwatch _uptime = Stopwatch.StartNew();
+    private readonly CommandExecutor _executor = new();
+    private readonly ExecutionEffects _effects;
     private double _accountedSeconds;
     private long _lastStatsSecond = -1;
     private bool _completedDuringUp;
@@ -32,6 +34,9 @@ public sealed class PulseController : IDisposable
     public AppSettings Settings { get; private set; }
     public FeedbackWindow Feedback { get; } = new();
     public IShell? Shell { get; set; }
+    public CommandExecutor Executor => _executor;
+    /// <summary>Most recent non-desktop process under a trigger press this session (spec 5.1 / 5.5).</summary>
+    public string RecentProcess { get; set; } = "";
     public ObservableCollection<LogEntry> Log { get; } = new();
     public ObservableCollection<ActivityEntry> Activity { get; } = new();
     public string ConfigPath => _store.FilePath;
@@ -73,10 +78,12 @@ public sealed class PulseController : IDisposable
     public PulseController(Dispatcher dispatcher)
     {
         _dispatcher = dispatcher;
+        _effects = new ExecutionEffects(this);
         string? loadError = null;
         try { Settings = _store.Load(); }
         catch (Exception ex) { loadError = ex.Message; Settings = new AppSettings(); }
         if (File.Exists(_store.FilePath)) SavedAt = File.GetLastWriteTime(_store.FilePath).ToString("HH:mm:ss");
+        EnsureCommandIds();
         NormalizeStatistics();
         ApplySettings();
 
@@ -114,6 +121,11 @@ public sealed class PulseController : IDisposable
         _hook.MiddleHoldMs = Settings.MiddleHoldMs;
         _hook.GesturesEnabled = Settings.GesturesEnabled;
         _hook.GestureMinDistancePx = Settings.GestureMinDistancePx;
+        Settings.MiddleClickMaxMs = Math.Clamp(Settings.MiddleClickMaxMs, 200, 800);
+        Settings.MiddlePassThroughMs = MiddleDecision.NormalizePassThroughMs(Settings.MiddlePassThroughMs, Settings.MiddleClickMaxMs);
+        _hook.MiddleClickMaxMs = Settings.MiddleClickMaxMs;
+        _hook.MiddlePassThroughMs = Settings.MiddlePassThroughMs;
+        _hook.PreserveMiddleClick = Settings.PreserveMiddleClick;
         _hook.PauseInFullscreen = Settings.PauseInFullscreen;
         _hook.SetExcludedApps(Settings.ExcludedApps ??= new());
         Feedback.Configure(Settings.CapsulePosition, Settings.CapsuleBreathing);
@@ -170,14 +182,25 @@ public sealed class PulseController : IDisposable
         var imported = JsonSerializer.Deserialize<AppSettings>(File.ReadAllText(path)) ?? throw new InvalidDataException("配置内容为空");
         imported.Commands ??= new();
         imported.Gestures ??= new();
+        imported.ContextApps ??= new();
+        imported.ExcludedApps ??= new();
+        imported.CommandsToday ??= new();
+        imported.History ??= new();
+        if (imported.SchemaVersion < AppSettings.CurrentSchemaVersion)
+            SettingsMigrator.MigrateFromV8(imported);
+        else
+            SettingsMigrator.Migrate(imported);
         CancelInput(quiet: true);
         Settings = imported;
+        EnsureCommandIds();
+        foreach (var command in Settings.Commands)
+            PinPolicy.Apply(command); // force Workflow/Repeat global after import
         NormalizeStatistics();
         ApplySettings();
         _hook.AutoSide = Settings.DetectedSideButton;
         SetStartup(Settings.StartupEnabled);
         Save();
-        AddLog("已导入配置并立即生效", "", LogTone.Hit);
+        AddLog(Loc.T("已导入配置并立即生效", "Settings imported and applied"), "", LogTone.Hit);
         SettingsReplaced?.Invoke();
         StateChanged?.Invoke();
         BindingsChanged?.Invoke();
@@ -339,7 +362,11 @@ public sealed class PulseController : IDisposable
             _engine.Down(ms);
             PressStartMs = ms;
             SetPhase(LivePhase.Press);
-            if (fresh) ShowCapsule(FeedbackMode.Armed, "", _engine.GapSuspended ? "松开右键即执行" : UsesMiddle ? "指令模式已激活" : "正在输入…");
+            if (fresh)
+            {
+                ShowCapsule(FeedbackMode.Armed, "", _engine.GapSuspended ? "松开右键即执行" : UsesMiddle ? "指令模式已激活" : "正在输入…",
+                    contextLine: CapsuleContextLine(_hook.SessionContext, null, MeaningSource.None, false));
+            }
             UpdateHint(ms);
             LiveChanged?.Invoke();
             return;
@@ -360,8 +387,11 @@ public sealed class PulseController : IDisposable
             LastPulse = Sequence[^1];
             LastReleaseMs = ms;
             SetPhase(LivePhase.Typing);
-            var exact = Settings.Commands.FirstOrDefault(c => c.Pattern == Sequence);
-            ShowCapsule(FeedbackMode.Typing, Sequence, exact?.Name ?? "正在输入…");
+            var ctx = _hook.SessionContext;
+            var exact = Settings.Commands.Resolve(Sequence, ctx.ContextKey, Settings.ContextEnabled);
+            var meaning = ContextResolver.Classify(exact, ctx.ContextKey);
+            ShowCapsule(FeedbackMode.Typing, Sequence, exact?.Name ?? "正在输入…",
+                contextLine: CapsuleContextLine(ctx, exact, meaning, false));
         }
         else
         {
@@ -437,10 +467,58 @@ public sealed class PulseController : IDisposable
             ShowCapsule(FeedbackMode.Armed, "", "用左键敲节奏；不敲直接松开即普通右键");
             _holdCapsuleShown = true;
         }
-        var (shown, hidden) = RhythmHints.For(Settings.Commands, prefix, 6);
-        try { Feedback.ShowHint(prefix, shown.Select(c => (c.Pattern, c.Name)).ToList(), hidden); }
+        var context = _hook.SessionContext;
+        var (shown, hidden) = RhythmHints.ForContext(
+            Settings.Commands, context.ContextKey, Settings.ContextEnabled, prefix, 6);
+        string title = ContextHintTitle(context);
+        var rows = shown.Select(c => (c.Pattern, c.Name, HintTag(c, context.ContextKey))).ToList();
+        try { Feedback.ShowHint(prefix, rows, hidden, title); }
         catch (Exception ex) { AddLog("节奏提示显示失败: " + ex.Message, "", LogTone.Err); }
     }
+
+    private string ContextHintTitle(ContextSnapshot context)
+    {
+        if (!Settings.CapsuleShowsContext || context.IsDesktop) return Loc.T("可用节奏", "Available rhythms");
+        return Loc.T($"{context.ProcessName} 中可用", $"Available in {context.ProcessName}");
+    }
+
+    private string HintTag(CommandBinding command, string contextKey)
+    {
+        if (command.Scope.Length > 0)
+        {
+            var global = Settings.Commands.Global(command.Pattern);
+            return global is null
+                ? Loc.T("专属", "Own")
+                : Loc.T($"替换「{global.Name}」", $"replaces “{global.Name}”");
+        }
+        return command.Pinned ? Loc.T("🔒 固定", "🔒 pinned") : "";
+    }
+
+    private string CapsuleContextLine(ContextSnapshot context, CommandBinding? command, MeaningSource meaning, bool reminding)
+    {
+        if (!Settings.CapsuleShowsContext) return "";
+        if (context.IsDesktop) return Loc.T("全局", "Global");
+        string app = context.ProcessName;
+        int own = Settings.Commands.Count(c => c.Scope.Equals(app, StringComparison.OrdinalIgnoreCase));
+        if (command is null)
+            return own > 0 ? Loc.T($"{app} · {own} 个节奏有专属含义", $"{app} · {own} own rhythms") : Loc.T($"{app} · 全部沿用全局", $"{app} · all global");
+        if (reminding && meaning == MeaningSource.Program)
+        {
+            var global = Settings.Commands.Global(command.Pattern);
+            string g = global is null ? "" : Loc.T($" · 全局是「{global.Name}」", $" · global is “{global.Name}”");
+            return Loc.T($"{app} 中 {PatternText(command.Pattern)} 是新含义{g}", $"{app}: {PatternText(command.Pattern)} is new{g}");
+        }
+        return meaning switch
+        {
+            MeaningSource.Program => Loc.T($"{app} 中的含义", $"Meaning in {app}"),
+            MeaningSource.Pinned => Loc.T($"🔒 全局 固定 · 在 {app}", $"🔒 Global pinned · in {app}"),
+            MeaningSource.Global => Loc.T($"全局 · 在 {app}", $"Global · in {app}"),
+            _ => app
+        };
+    }
+
+    private static string PatternText(string pattern) =>
+        string.Concat(pattern.Select(c => c == '.' ? '·' : c == '-' ? '—' : c));
 
     private char? Classify(double duration)
     {
@@ -452,25 +530,16 @@ public sealed class PulseController : IDisposable
     private void OnCompleted(Recognition result)
     {
         _completedDuringUp = true;
+        var context = _hook.SessionContext;
+        _effects.TrackRecentApp(context);
         _hook.FinishSequence();
         LastReleaseMs = null;
         HitPattern = result.Pattern;
-        HitCommand = result.Command;
-        if (result.Command is { } command)
-        {
-            SetPhase(LivePhase.Matched);
-            _ = Execute(command, result.Pattern);
-        }
-        else
-        {
-            SetPhase(LivePhase.Miss);
-            Settings.MissesToday++;
-            AddActivity(new ActivityEntry(DateTime.Now, ActivityType.Miss, "未找到匹配的指令", result.Pattern));
-            ShowCapsule(FeedbackMode.Failed, result.Pattern, "未找到匹配指令");
-            AddLog("没有匹配的指令: " + result.Pattern, "", LogTone.Err);
-            SaveSoon();
-            StatsChanged?.Invoke();
-        }
+        var command = Settings.Commands.Resolve(result.Pattern, context.ContextKey, Settings.ContextEnabled);
+        HitCommand = command;
+        SetPhase(command is null ? LivePhase.Miss : LivePhase.Matched);
+        _ = Dispatch(ExecutionSource.Rhythm, result.Pattern, context, command);
+        _hook.ReleaseContext();
         LiveChanged?.Invoke();
     }
 
@@ -546,6 +615,39 @@ public sealed class PulseController : IDisposable
         _ = ExecuteGesture(gesture);
     }
 
+    private async Task Dispatch(ExecutionSource source, string pattern, ContextSnapshot context, CommandBinding? command, string direction = "")
+    {
+        var request = CommandExecutor.Build(
+            source, pattern, context, command, Settings.ContextEnabled, Settings.ActivateTargetForShortcut, direction);
+        if (command is null)
+        {
+            _effects.Apply(ExecutionResult.Miss(pattern, context), source);
+            return;
+        }
+
+        // Workflow confirm stays on the UI thread before the executor runs.
+        Func<CommandBinding, bool, Task<bool>>? confirm = null;
+        if (command.ActionKind == ActionKind.Workflow && Settings.ConfirmWorkflows && source != ExecutionSource.Test)
+        {
+            confirm = async (binding, _) =>
+            {
+                var steps = ParseSteps(binding.Target);
+                var items = steps.Select(s => $"{Loc.Kind(s.Kind)}  {s.Target}{(s.DelayMs > 0 ? $"  (等待 {s.DelayMs} ms)" : "")}").ToList();
+                return Shell is not null && await Shell.ConfirmAsync(new ConfirmRequest(
+                    $"执行工作流「{binding.Name}」？",
+                    $"将按顺序执行 {steps.Count} 个本地动作。可在 设置 › 安全与数据 中关闭此确认。",
+                    items, "执行"));
+            };
+        }
+
+        ShowCapsule(FeedbackMode.Typing, pattern, command.Name + " · 正在执行",
+            direction.Length > 0 ? Directions.Icon(direction) : null);
+        var fired = command;
+        var result = await _executor.RunAsync(request, _hook.InjectionBlocked, confirm);
+        // When Repeat expands, result.Command is the underlying action.
+        _effects.Apply(result, source, fired);
+    }
+
     private void SetPhase(LivePhase phase)
     {
         Phase = phase;
@@ -566,61 +668,34 @@ public sealed class PulseController : IDisposable
 
     // ---------- execution ----------
 
-    public Task ExecuteGesture(GestureBinding gesture) => Execute(
-        new CommandBinding { Name = gesture.Name, ActionKind = gesture.ActionKind, Target = gesture.Target }, "", gesture.Direction);
+    public Task ExecuteGesture(GestureBinding gesture) => Dispatch(
+        ExecutionSource.Gesture, "", ContextSnapshot.Desktop,
+        new CommandBinding { Name = gesture.Name, ActionKind = gesture.ActionKind, Target = gesture.Target, Pattern = "" },
+        gesture.Direction);
 
-    public async Task Execute(CommandBinding command, string pattern, string direction = "")
+    public Task Execute(CommandBinding command, string pattern, string direction = "") =>
+        Dispatch(ExecutionSource.Rhythm, pattern, _hook.SessionContext, command, direction);
+
+    /// <summary>Commands-view Test button: same activation rules as a real run (spec 5.6).</summary>
+    public Task TestCommand(CommandBinding command)
     {
-        bool isWorkflow = command.ActionKind == ActionKind.Workflow;
-        IconKind? icon = direction.Length > 0 ? Directions.Icon(direction) : null;
-        if (isWorkflow && Settings.ConfirmWorkflows)
-        {
-            var steps = ParseSteps(command.Target);
-            var items = steps.Select(s => $"{Loc.Kind(s.Kind)}  {s.Target}{(s.DelayMs > 0 ? $"  (等待 {s.DelayMs} ms)" : "")}").ToList();
-            bool ok = Shell is not null && await Shell.ConfirmAsync(new ConfirmRequest(
-                $"执行工作流「{command.Name}」？",
-                $"将按顺序执行 {steps.Count} 个本地动作。可在 设置 › 安全与数据 中关闭此确认。",
-                items, "执行"));
-            if (!ok)
-            {
-                Feedback.HideNow();
-                AddLog("用户取消了工作流执行", "", LogTone.None);
-                return;
-            }
-        }
-        ShowCapsule(FeedbackMode.Typing, pattern, command.Name + " · 正在执行", icon);
-        try
-        {
-            if (command.ActionKind == ActionKind.Shortcut && _hook.InjectionBlocked)
-                throw new InvalidOperationException("模拟输入被系统拦截，快捷键无法发送");
-            await Task.Run(() => ActionRunner.Run(command, isWorkflow));
-            Settings.ExecutionsToday++;
-            Settings.CommandsToday ??= new();
-            Settings.CommandsToday[command.Name] = Settings.CommandsToday.GetValueOrDefault(command.Name) + 1;
-            AddActivity(new ActivityEntry(DateTime.Now, direction.Length > 0 ? ActivityType.Gesture : ActivityType.Ok, command.Name,
-                command.Pattern, command.ActionKind, TargetText(command), direction));
-            AddLog("已请求执行：" + command.Name, "", LogTone.Hit);
-            if (Settings.SuccessSound) System.Media.SystemSounds.Asterisk.Play();
-            ShowCapsule(FeedbackMode.Matched, pattern, command.Name + " · 已发起", icon);
-        }
-        catch (Exception ex)
-        {
-            string message = ex.GetBaseException().Message;
-            AddActivity(new ActivityEntry(DateTime.Now, ActivityType.Failed, "执行失败：" + command.Name, command.Pattern, command.ActionKind, message, direction));
-            AddLog($"执行失败：{command.Name} · {message}", "", LogTone.Err);
-            ShowCapsule(FeedbackMode.Failed, pattern, "执行失败 · " + message, icon);
-            Shell?.Toast("执行失败：" + message, IconKind.Alert);
-        }
-        SaveSoon();
-        StatsChanged?.Invoke();
+        var context = ContextTarget.AtCursor();
+        _effects.TrackRecentApp(context);
+        return Dispatch(ExecutionSource.Test, command.Pattern, context, command);
     }
 
-    public void ShowCapsule(FeedbackMode mode, string pattern, string text, IconKind? icon = null)
+    public void ShowCapsule(FeedbackMode mode, string pattern, string text, IconKind? icon = null, bool reminding = false, string? contextLine = null)
     {
         if (!Settings.FloatingFeedback) return;
-        try { Feedback.ShowState(mode, pattern, text, icon); }
+        try { Feedback.ShowState(mode, pattern, text, icon, reminding, contextLine); }
         catch (Exception ex) { AddLog("状态胶囊显示失败: " + ex.Message, "", LogTone.Err); }
     }
+
+    public string CapsuleLineFor(ExecutionResult result) =>
+        CapsuleContextLine(result.Context, result.Command, result.Meaning, result.Reminding && Settings.NewMeaningReminder);
+
+    internal void AddActivityPublic(ActivityEntry entry) => AddActivity(entry);
+    internal void RaiseStats() => StatsChanged?.Invoke();
 
     public void PreviewCapsule()
     {
@@ -632,8 +707,8 @@ public sealed class PulseController : IDisposable
     {
         if (!Settings.FloatingFeedback) { Shell?.Toast("请先启用状态胶囊", IconKind.Info); return; }
         Feedback.ShowState(FeedbackMode.Armed, "", "用左键敲节奏；不敲直接松开即普通右键", null);
-        var (shown, hidden) = RhythmHints.For(Settings.Commands, "", 6);
-        Feedback.ShowHint("", shown.Select(c => (c.Pattern, c.Name)).ToList(), hidden);
+        var (shown, hidden) = RhythmHints.ForContext(Settings.Commands, ContextNames.Desktop, Settings.ContextEnabled, "", 6);
+        Feedback.ShowHint("", shown.Select(c => (c.Pattern, c.Name, HintTag(c, ContextNames.Desktop))).ToList(), hidden);
         var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(3) };
         timer.Tick += (_, _) =>
         {
@@ -667,7 +742,25 @@ public sealed class PulseController : IDisposable
     }
 
     public string? ConflictName(string pattern, CommandBinding? except)
-        => Settings.Commands.FirstOrDefault(c => c.Pattern == pattern && !ReferenceEquals(c, except))?.Name;
+    {
+        var check = Settings.Commands.Check(pattern, except?.Scope ?? "", except?.Id, except?.Pinned ?? false, except?.ActionKind ?? ActionKind.Shortcut);
+        return check.Issue is PatternIssue.None or PatternIssue.ReplacesGlobal ? null
+            : check.Message.Length > 0 ? check.Message
+            : Settings.Commands.FirstOrDefault(c => c.Pattern == pattern && c.Id != except?.Id)?.Name;
+    }
+
+    private void EnsureCommandIds()
+    {
+        foreach (var command in Settings.Commands)
+        {
+            if (string.IsNullOrEmpty(command.Id)) command.Id = Guid.NewGuid().ToString("N");
+            command.Scope ??= "";
+            PinPolicy.Apply(command);
+        }
+        Settings.ContextApps ??= new();
+        Settings.CommandsToday ??= new();
+        Settings.History ??= new();
+    }
 
     public void AddLog(string text, string note, LogTone tone)
     {
@@ -700,11 +793,12 @@ public sealed class PulseController : IDisposable
         if (Settings.StatisticsDate != today)
         {
             Settings.History ??= new();
-            if (Settings.StatisticsDate.Length > 0 && (Settings.ExecutionsToday > 0 || Settings.MissesToday > 0))
+            if (Settings.StatisticsDate.Length > 0 && (Settings.ExecutionsToday > 0 || Settings.MissesToday > 0 || Settings.ActivationFailedToday > 0))
             {
                 Settings.History.Add(new DailyStat
                 {
                     Date = Settings.StatisticsDate, Executions = Settings.ExecutionsToday, Misses = Settings.MissesToday,
+                    ActivationFailed = Settings.ActivationFailedToday,
                     Commands = Settings.CommandsToday ?? new()
                 });
                 if (Settings.History.Count > 90) Settings.History.RemoveRange(0, Settings.History.Count - 90);
@@ -712,6 +806,7 @@ public sealed class PulseController : IDisposable
             Settings.StatisticsDate = today;
             Settings.ExecutionsToday = 0;
             Settings.MissesToday = 0;
+            Settings.ActivationFailedToday = 0;
             Settings.CommandsToday = new();
             changed = true;
         }

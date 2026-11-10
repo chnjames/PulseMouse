@@ -33,7 +33,11 @@ public partial class WorkflowsView : System.Windows.Controls.UserControl, IPageV
         InitializeComponent();
         _shell = shell;
         _c = shell.Controller;
-        Composer.FindConflict = p => _c.ConflictName(p, _editing);
+        Composer.FindConflict = p =>
+        {
+            var check = _c.Settings.Commands.Check(p, "", _editing?.Id, asPinned: true, ActionKind.Workflow);
+            return check.SaveBlocked ? (check.Message.Length > 0 ? check.Message : "conflict") : null;
+        };
         Composer.PatternChanged += _ => PatternLength.Text = $"{Composer.Pattern.Length} / 5";
         Composer.LimitReached += () => _shell.Toast("节奏最多 5 位", IconKind.Alert);
         _c.BindingsChanged += () => { if (IsLoaded) RebuildList(); };
@@ -282,18 +286,37 @@ public partial class WorkflowsView : System.Windows.Controls.UserControl, IPageV
     private void SaveClick(object sender, RoutedEventArgs e)
     {
         string name = NameBox.Text.Trim(), pattern = Composer.Pattern;
-        if (name.Length == 0) { _shell.Toast("请填写名称", IconKind.Alert); return; }
-        if (pattern.Length == 0) { _shell.Toast("请添加 1–5 位节奏", IconKind.Alert); return; }
-        if (_c.ConflictName(pattern, _editing) is not null) { _shell.Toast("该节奏已经被占用", IconKind.Alert); return; }
+        if (name.Length == 0) { _shell.Toast(Loc.T("请填写名称", "Name required"), IconKind.Alert); return; }
+        if (pattern.Length == 0) { _shell.Toast(Loc.T("请添加 1–5 位节奏", "Add a 1–5 pulse rhythm"), IconKind.Alert); return; }
+        // Workflows are always global + pinned (spec 5.3 / 5.12).
+        var check = _c.Settings.Commands.Check(pattern, "", _editing?.Id, asPinned: true, ActionKind.Workflow);
+        if (check.SaveBlocked)
+        {
+            string msg = check.Issue switch
+            {
+                PatternIssue.GlobalPinnedByOthers or PatternIssue.ReplacesGlobal when check.Message.Length > 0 =>
+                    Loc.T($"{check.Message} 中这个节奏已有程序含义；工作流需先改用其他节奏",
+                        $"{check.Message} already overrides this rhythm; pick another for the workflow"),
+                PatternIssue.GlobalTaken => Loc.T($"已被全局「{check.Message}」占用", $"Taken by global “{check.Message}”"),
+                _ => Loc.T("该节奏无法用于工作流", "This rhythm cannot be used for a workflow"),
+            };
+            _shell.Toast(msg, IconKind.Alert);
+            return;
+        }
         for (int i = 0; i < _steps.Count; i++)
         {
-            if (PulseController.ValidateTarget(_steps[i].Kind, _steps[i].Target) is { } error) { _shell.Toast($"第 {i + 1} 步：{error}", IconKind.Alert); return; }
-            if (!int.TryParse(_steps[i].Delay.Trim(), out var delay) || delay is < 0 or > MaxDelayMs) { _shell.Toast($"第 {i + 1} 步：延迟需为 0–5000 ms", IconKind.Alert); return; }
+            if (PulseController.ValidateTarget(_steps[i].Kind, _steps[i].Target) is { } error) { _shell.Toast(Loc.T($"第 {i + 1} 步：", $"Step {i + 1}: ") + error, IconKind.Alert); return; }
+            if (!int.TryParse(_steps[i].Delay.Trim(), out var delay) || delay is < 0 or > MaxDelayMs) { _shell.Toast(Loc.T($"第 {i + 1} 步：延迟需为 0–5000 ms", $"Step {i + 1}: delay must be 0–5000 ms"), IconKind.Alert); return; }
         }
         string json = JsonSerializer.Serialize(ToSteps());
         if (_editing is null)
         {
-            _editing = new CommandBinding { Name = name, Pattern = pattern, ActionKind = ActionKind.Workflow, Target = json };
+            _editing = new CommandBinding
+            {
+                Id = Guid.NewGuid().ToString("N"), Name = name, Pattern = pattern,
+                ActionKind = ActionKind.Workflow, Target = json, Scope = "", Pinned = true
+            };
+            PinPolicy.Apply(_editing);
             _c.Settings.Commands.Add(_editing);
         }
         else
@@ -302,9 +325,11 @@ public partial class WorkflowsView : System.Windows.Controls.UserControl, IPageV
             _editing.Pattern = pattern;
             _editing.ActionKind = ActionKind.Workflow;
             _editing.Target = json;
+            _editing.Scope = "";
+            PinPolicy.Apply(_editing);
         }
         _c.NotifyBindingsChanged();
-        _shell.Toast($"已保存「{name}」");
+        _shell.Toast(Loc.T($"已保存「{name}」", $"Saved “{name}”"));
         LoadDraft(_editing);
     }
 

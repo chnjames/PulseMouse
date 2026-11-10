@@ -1,98 +1,103 @@
 # PulseMouse
 
-鼠标上的快捷键：按住右键，用左键敲一个节奏，松开右键就执行。光标不动、不用看屏幕，适合每天最常用的 3–8 个动作。
+<p align="center">
+  <img src="docs/assets/pulsemouse-logo-1024.png" width="128" alt="PulseMouse logo: a mint dot and dash on a dark rounded tile">
+</p>
 
-当前版本 v0.8（Windows 10/11，.NET 10，WPF）。产品定位与路线见 `docs/PRODUCT_ROADMAP.md`。
+**Mouse-first shortcuts for Windows.** Hold the right mouse button, tap a short rhythm with the left button, and release to run a frequent action—without moving the pointer or opening a menu.
 
-## 怎么用
+[简体中文](README.zh-CN.md) · [Architecture](docs/ARCHITECTURE.md) · [Release checklist](docs/RELEASE_CHECKLIST.md) · [Changelog](CHANGELOG.md)
 
-### 节奏
+> **Status — v0.9.0 pre-release.** The application builds and its Core smoke tests pass. Global mouse-hook behavior, injected input, target-window activation, and display scaling still require the manual checks listed in the release checklist before a stable release.
 
-- 点 `·`：快速点一下（≤ 300 ms）。
-- 划 `—`：按住约半秒（500–1600 ms）。
-- 300–500 ms 之间、或短于 35 ms、长于 1600 ms 的按压无法判定，本次输入作废。
-- 一条节奏最多 5 位。配置里点写作 `.`，划写作 `-`，例如 `.-.`。
+## Why PulseMouse?
 
-### 输入方式
+Launchers and menus are great when you need to discover an action. PulseMouse is for the small set of actions you already know by heart: copy, screenshot, switch window, open a tool, or send a shortcut. Its rhythm input is designed to keep your attention and cursor where they already are.
 
-| 方式 | 操作 | 原生功能 |
-|---|---|---|
-| 自动（默认） | 鼠标有侧键时用侧键，否则用右键和弦；按一下侧键即切换并记住 | 见对应方式 |
-| 右键和弦 | 按住右键，左键敲节奏，松开右键立即执行 | 右键单击、拖拽、长按照常可用（见下） |
-| 侧键 X1 / X2 | 直接用侧键敲节奏，停顿 750 ms 后执行 | 选中的侧键不再有后退/前进 |
-| 中键（经典） | 静止长按中键 550 ms 激活，7 秒内用左键敲节奏，停顿 750 ms 后执行 | 中键事件照常透传，浏览器可能进入自动滚动 |
+![PulseMouse concept visual: a mouse, cursor, and mint dot-dash pulse](docs/assets/pulsemouse-cover.png)
 
-右键和弦如何保留原生右键：按下右键时先扣住，再根据接下来发生的事决定。
+## Highlights
 
-- 没按左键就松开：补发一次完整右键单击，右键菜单正常弹出。
-- 按住时移动超过 16 px：补发右键按下并放行，右键拖拽不受影响。
-- 按住 8 秒仍没按左键：补发右键按下并放行。
-- 敲节奏过程中滚动滚轮：取消本次输入。
+- **Fast chord input** — hold right-click, tap `.` (short press) or `-` (long press) with left-click, then release to execute immediately.
+- **Context Pulse** — give the same rhythm a different meaning in Chrome, Explorer, Excel, or another app. Global mappings remain the fallback; pinned mappings stay the same everywhere.
+- **Safe native fallback** — ordinary right-clicks and right-dragging are replayed; excluded, fullscreen, and elevated targets are passed through when appropriate.
+- **Useful actions** — launch an application or folder, open an HTTPS URL, send a shortcut, run a confirmed workflow, or repeat the last successful action.
+- **Feedback without focus theft** — an on-screen capsule, reachable-rhythm hints, a state-aware tray icon, diagnostics, and local usage statistics.
+- **Local by design** — settings and statistics stay in `%LOCALAPPDATA%\PulseMouse\settings.json`; there is no account or telemetry.
 
-### 动作类型
+## Quick start
 
-- 打开程序：`.exe` / `.lnk` 路径或命令名，支持环境变量。
-- 打开文件夹。
-- 打开网址：仅 http / https。
-- 发送快捷键：如 `Ctrl+C`、`Shift+Win+S`、`Alt+Tab`；指令页可直接按键录入，也有常用预设。
-- 工作流：1–12 步，每步延迟 0–5000 ms，步骤可为程序 / 文件夹 / 网址；不允许嵌套；执行前默认需要确认。
+1. Start PulseMouse and confirm the dashboard reports that the hook is installed.
+2. Create three to eight mappings you use every day. Keep early rhythms short.
+3. In the default automatic mode, use a side button when one is detected; otherwise hold right-click and tap with left-click.
+4. Release the trigger button to execute. Scroll during a right-click chord to cancel it.
 
-### 其他功能
+### Rhythm rules
 
-- 方向手势：按住中键上下左右拖动（≥ 75 px），在中键模式和右键和弦下可用。
-- 状态胶囊：屏幕底部显示输入进度和结果；输入中停顿约 0.6 s 会列出当前还能匹配的节奏。
-- 托盘图标按状态变色：薄荷绿为监听中，灰色为已暂停，琥珀色为监听未生效或模拟输入被拦截。
-- 统计：今日执行与未匹配次数、每条指令的使用次数、最近 90 天的每日历史、本周运行时长。
-- 设置：开机自启动（写入当前用户 Run 注册表项，无需管理员）、成功提示音、中文 / English、胶囊位置与呼吸动画、配置导出 / 导入（导入后立即生效）。
+| Input | Meaning |
+| --- | --- |
+| Quick press, up to 300 ms | `.` dot |
+| Hold, 500–1600 ms | `-` dash |
+| 300–500 ms, below 35 ms, or over 1600 ms | rejected |
 
-### 不会拦截鼠标的情况
+A mapping contains up to five pulses. In right-click chord mode, releasing right-click commits the sequence immediately. Side-button and classic middle-button modes commit after a 750 ms pause.
 
-为避免误伤，以下情况 PulseMouse 让鼠标保持原生行为，并在诊断日志中写明原因：
+## Context Pulse
 
-- 右键和弦：光标下的窗口以管理员权限运行，而 PulseMouse 没有（Windows 不允许普通程序向其补发输入）。
-- 程序在设置页的“排除的程序”列表中。
-- 前台程序全屏运行，且开启了“全屏时暂停”（默认开启）。
-- 模拟输入被系统丢弃（例如远程控制工具屏蔽了键鼠，或 PulseMouse 从受限环境启动）：右键和弦暂停、右键恢复原生，快捷键动作也无法发送，恢复后自动重新启用。
+PulseMouse records the window under the pointer when the trigger starts. Resolution is deterministic:
 
-## 构建与运行
+1. A pinned global mapping wins.
+2. An app-specific mapping wins when context switching is enabled.
+3. Otherwise the global mapping runs.
 
-需要 .NET 10 SDK。
+The desktop and taskbar intentionally use global mappings only. Shortcut actions can activate the captured target window before sending input; if that window is gone or cannot be activated, the action is not sent.
+
+## Supported actions
+
+| Action | Notes |
+| --- | --- |
+| Application | `.exe`, `.lnk`, or a command name; environment variables are expanded. |
+| Folder | Opens an existing folder. |
+| URL | HTTP and HTTPS only. |
+| Shortcut | Examples: `Ctrl+C`, `Alt+Tab`, `Shift+Win+S`. |
+| Workflow | 1–12 application, folder, or URL steps; confirmation is on by default. |
+| Repeat last action | Replays the most recent successful non-workflow action. |
+| Direction gesture | Hold middle-click and drag up, down, left, or right. |
+
+## Build from source
+
+Requirements: Windows 10/11 and the .NET 10 SDK.
 
 ```powershell
-dotnet build PulseMouse.slnx -c Release
-dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release
+dotnet restore PulseMouse.slnx
+dotnet build PulseMouse.slnx -c Release --no-restore
+dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release --no-build
 ```
 
-程序位于 `src\PulseMouse.App\bin\Release\net10.0-windows\PulseMouse.exe`，请在资源管理器中双击启动。从开发工具的终端启动时，模拟输入可能被丢弃，右键和弦会自动暂停。
+For a self-contained x64 build, run `./build-windows.ps1`. It writes output to `publish/win-x64/`, which is intentionally excluded from Git.
 
-`build-windows.ps1` 依次执行构建、冒烟测试，并发布自包含单文件版本到 `publish\win-x64\`。
+## Safety and limitations
 
-修改应用图标：编辑 `src/PulseMouse.App/Services/AppIcon.cs`，然后运行
+- PulseMouse uses a global mouse hook and `SendInput`. Unsigned builds may trigger security warnings.
+- Do not use it with games or anti-cheat-protected software.
+- A non-elevated instance cannot reliably inject input into elevated applications.
+- Touchpads generally cannot perform the right-click + left-click chord comfortably.
+- This pre-release has no installer, code signature, or automatic updater yet.
 
-```powershell
-dotnet run --project tools/IconGen -c Release -- src/PulseMouse.App/Assets/PulseMouse.ico preview.png
-```
+See [SECURITY.md](SECURITY.md) for responsible disclosure guidance and [docs/RELEASE_CHECKLIST.md](docs/RELEASE_CHECKLIST.md) for manual validation requirements.
 
-重新生成 `.ico`，`preview.png` 与 `preview-tray.png` 用于检查各尺寸与托盘效果。
+## Documentation
 
-## 配置
+- [Architecture](docs/ARCHITECTURE.md)
+- [Development guide](docs/DEVELOPMENT.md)
+- [Product roadmap](docs/PRODUCT_ROADMAP.md)
+- [v0.9 implementation specification](docs/V0_9_CONTEXT_PULSE_SPEC.md)
+- [Changelog](CHANGELOG.md)
 
-配置保存在 `%LOCALAPPDATA%\PulseMouse\settings.json`。旧版本配置可直接读取，新增字段使用默认值。导入配置会替换当前全部指令、手势与偏好。
+## Contributing
 
-## 已知限制
+Issues and pull requests are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) first.
 
-- 未签名，可能被杀毒软件提示；不建议在有反作弊的游戏中使用。
-- 快捷键动作无法发送到以管理员权限运行的窗口（除非 PulseMouse 也以管理员身份运行）。
-- 侧键模式会占用所选侧键的后退 / 前进功能。
-- 中键模式下中键事件照常透传，浏览器可能触发自动滚动。
-- Esc 取消只在 PulseMouse 窗口处于前台时有效；在其他程序中请用滚轮（右键和弦）或等待超时。
-- 指令不能按应用区分，同一节奏在所有程序中含义相同。
-- 没有安装包和自动更新。
+## License
 
-## 文档
-
-- `docs/PRODUCT_ROADMAP.md`：定位、竞品、路线图与验证计划。
-- `docs/ARCHITECTURE.md`：模块划分与输入处理流程。
-- `docs/RELEASE_CHECKLIST.md`：真机手工验收清单。
-- `CHANGELOG.md`：版本记录。
-- `docs/archive/`：v0.3–v0.7 时期的历史文档，内容已过时，仅供查阅。
+Released under the [MIT License](LICENSE).

@@ -21,6 +21,7 @@ public sealed class MouseHook : IDisposable
     private const int WmRDown = 0x0204, WmRUp = 0x0205, WmWheel = 0x020A, WmHWheel = 0x020E;
     private const uint LlmhfInjected = 0x01;
     private const uint MouseEventRightDown = 0x0008, MouseEventRightUp = 0x0010;
+    private const uint MouseEventMiddleDown = 0x0020, MouseEventMiddleUp = 0x0040;
     private static readonly nuint InjectionMarker = 0x50554C53;
     private readonly HookProc _callback;
     private readonly object _gate = new();
@@ -30,6 +31,7 @@ public sealed class MouseHook : IDisposable
     private volatile nint _handle;
     private bool _sideBypassed, _middleBypassed;
     private readonly MiddleActivation _middle = new();
+    private readonly MiddleDecision _middleDecision = new();
     private readonly ChordActivation _chord = new();
     private bool _leftIsDown;
     private bool _physicalLeftDown;
@@ -42,7 +44,31 @@ public sealed class MouseHook : IDisposable
     private readonly GestureRecognizer _gesture = new();
     private bool _gestureReady;
     public bool GesturesEnabled { get; set; } = true;
-    public int GestureMinDistancePx { get; set; } = 75;
+    public int GestureMinDistancePx
+    {
+        get => _gestureMinDistancePx;
+        set
+        {
+            _gestureMinDistancePx = Math.Clamp(value, 25, 500);
+            _middleDecision.GestureMinDistancePx = _gestureMinDistancePx;
+        }
+    }
+    private int _gestureMinDistancePx = 75;
+    public int MiddleClickMaxMs
+    {
+        get => _middleDecision.ClickMaxMs;
+        set => _middleDecision.ClickMaxMs = Math.Clamp(value, 200, 800);
+    }
+    public int MiddlePassThroughMs
+    {
+        get => _middleDecision.PassThroughMs;
+        set => _middleDecision.PassThroughMs = MiddleDecision.NormalizePassThroughMs(value, _middleDecision.ClickMaxMs);
+    }
+    public bool PreserveMiddleClick
+    {
+        get => _middleDecision.PreserveMiddleClick;
+        set => _middleDecision.PreserveMiddleClick = value;
+    }
     public event Action<string>? GestureEvent;
     private int _autoSide; // 0: unobserved, 1: X1, 2: X2
     /// <summary>Side button Auto mode settled on (0: none yet); persisted so detection survives restarts.</summary>
@@ -53,7 +79,16 @@ public sealed class MouseHook : IDisposable
     public static string NormalizeAppName(string name) => TargetInspector.Normalize(name);
     public bool Enabled { get; set; } = true;
     public MouseInputMode Mode { get; set; } = MouseInputMode.Auto;
-    public int MiddleHoldMs { get => _middle.MinimumHoldMs; set => _middle.MinimumHoldMs = Math.Clamp(value, 300, 2000); }
+    public int MiddleHoldMs
+    {
+        get => _middle.MinimumHoldMs;
+        set
+        {
+            int ms = Math.Clamp(value, 300, 2000);
+            _middle.MinimumHoldMs = ms;
+            _middleDecision.ArmHoldMs = ms;
+        }
+    }
     public bool MiddleArmed => _middle.Armed;
     public bool IsInstalled => _handle != 0;
     public string ActiveInput => Mode switch
@@ -72,7 +107,26 @@ public sealed class MouseHook : IDisposable
     /// </summary>
     public event Action<ChordStep, long>? ChordEvent;
     public event Action<string>? StateChanged;
+    /// <summary>Context frozen at the trigger press for this input session (spec 5.1).</summary>
+    public ContextSnapshot SessionContext { get; private set; } = ContextSnapshot.Desktop;
+    private bool _contextFrozen;
     public MouseHook() => _callback = HookCallback;
+
+    /// <summary>Allows the next trigger press to capture a fresh context.</summary>
+    public void ReleaseContext()
+    {
+        lock (_gate) { _contextFrozen = false; SessionContext = ContextSnapshot.Desktop; }
+    }
+
+    private void FreezeContext(int x, int y)
+    {
+        lock (_gate)
+        {
+            if (_contextFrozen) return;
+            SessionContext = ContextTarget.At(x, y);
+            _contextFrozen = true;
+        }
+    }
 
     public void Install()
     {
@@ -114,8 +168,11 @@ public sealed class MouseHook : IDisposable
         {
             _chord.Reset();
             _middle.Disarm();
+            _middleDecision.Reset();
             _gesture.Cancel(); _gestureReady = false;
             _leftIsDown = false;
+            _contextFrozen = false;
+            SessionContext = ContextSnapshot.Desktop;
         }
     }
 
@@ -140,18 +197,22 @@ public sealed class MouseHook : IDisposable
             bool injected = (info.Flags & LlmhfInjected) != 0;
             // Remote-control tools (ToDesk tags 0x77, RDP…) deliver the user's real clicks as injected input. A tagged
             // right press right after our own replay is another hook re-sending it; swallowing that again would loop.
-            bool echo = injected && info.ExtraInfo != 0 && wParam == WmRDown && ToMs(ticks) - _lastReplayMs < 150;
+            bool echo = injected && info.ExtraInfo != 0
+                && (wParam == WmRDown || wParam == WmMDown || wParam == WmMUp)
+                && ToMs(ticks) - _lastReplayMs < 150;
             bool userInput = !echo;
             if (userInput && wParam == WmLDown) _physicalLeftDown = true;
             else if (userInput && wParam == WmLUp) _physicalLeftDown = false;
 
             CheckTimeout(ticks);
             if (userInput && HandleChord((int)wParam, ticks, info, injected)) return 1;
-            if (echo && Enabled && ChordActive)
+            if (echo && Enabled && ChordActive && wParam == WmRDown)
                 RawButtonEvent?.Invoke(new("右键", true, ticks, false, $"其他程序紧接着补发的右键（标记 0x{info.ExtraInfo:X}），放行以免循环"));
-            if (wParam == WmMove && _middle.IsPressingMiddle)
+            if (userInput && wParam == WmMove && _middleDecision.IsHolding)
             {
-                _middle.Move(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
+                // Track distance for the gesture, but let the cursor travel.
+                // Swallowing WM_MOUSEMOVE freezes the pointer at the press point, so drag distance stays 0.
+                _middleDecision.Move(info.X, info.Y);
             }
             if (wParam == WmXDown || wParam == WmXUp)
             {
@@ -184,6 +245,7 @@ public sealed class MouseHook : IDisposable
                     RawButtonEvent?.Invoke(new($"X{button}", down, ticks, consume, consume ? "节奏输入" : bypass is null ? "透传" : "透传：" + bypass));
                     if (consume)
                     {
+                        if (down) FreezeContext(info.X, info.Y);
                         ButtonEvent?.Invoke(down, ticks);
                         return 1;
                     }
@@ -191,39 +253,7 @@ public sealed class MouseHook : IDisposable
             }
             else if (wParam == WmMDown || wParam == WmMUp)
             {
-                bool down = wParam == WmMDown;
-                string? bypass = null;
-                if (down)
-                {
-                    bypass = Enabled && (Mode == MouseInputMode.Middle || ChordActive) ? _inspector.Bypass(info.X, info.Y, replays: false) : null;
-                    _middleBypassed = bypass is not null;
-                }
-                bool eligible = Enabled && Mode == MouseInputMode.Middle && !_middleBypassed;
-                bool gestureEligible = eligible || (Enabled && ChordActive && !_middleBypassed);
-                long ms = ToMs(ticks);
-                if (down)
-                {
-                    _middle.Down(ms, Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
-                    _gestureReady = gestureEligible && GesturesEnabled;
-                    _gesture.Configure(GestureMinDistancePx);
-                    if (_gestureReady) _gesture.Start(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4));
-                }
-                else
-                {
-                    string? direction = _gestureReady ? _gesture.End(Marshal.ReadInt32(lParam, 0), Marshal.ReadInt32(lParam, 4)) : null;
-                    _gestureReady = false;
-                    bool activated = _middle.Up(ms);
-                    if (gestureEligible && direction is not null)
-                    {
-                        _middle.Disarm();
-                        GestureEvent?.Invoke(direction);
-                    }
-                    if (eligible && activated && direction is null)
-                        StateChanged?.Invoke($"中键长按激活：7 秒内用左键输入节奏（鼠标移动超过 {_middle.MovementTolerancePx}px 不激活）");
-                    else if (!eligible) _middle.Disarm();
-                    RawButtonEvent?.Invoke(new("中键", false, ticks, false, activated && eligible ? "激活成功，原始事件透传" : "未激活，原始事件透传"));
-                }
-                if (down) RawButtonEvent?.Invoke(new("中键", true, ticks, false, bypass is null ? "原始事件透传" : "透传，不识别手势：" + bypass));
+                if (HandleMiddle((int)wParam, ticks, info)) return 1;
             }
             else if (wParam == WmLDown || wParam == WmLUp)
             {
@@ -260,6 +290,17 @@ public sealed class MouseHook : IDisposable
             }
         }
         if (_middle.Expire(ToMs(ticks), _leftIsDown)) StateChanged?.Invoke("中键指令窗口超时，恢复普通鼠标操作");
+        switch (_middleDecision.Tick(ToMs(ticks)))
+        {
+            case MiddleDecisionStep.ReplayDown:
+                _gesture.Cancel();
+                _gestureReady = false;
+                ReplayMiddleDownAtOrigin();
+                ReleaseContext();
+                RawButtonEvent?.Invoke(new("中键", true, ticks, false, $"静止按住 {_middleDecision.PassThroughMs} ms，补发中键按下并放行"));
+                StateChanged?.Invoke("中键已交给系统（自动滚动 / 平移可用）");
+                break;
+        }
         switch (_chord.Tick(ToMs(ticks)))
         {
             case ChordStep.ReplayDown:
@@ -272,6 +313,94 @@ public sealed class MouseHook : IDisposable
                 ChordEvent?.Invoke(ChordStep.Cancel, ticks);
                 break;
         }
+    }
+
+    /// <summary>v0.9 middle delay decision; returns true when the event must be swallowed.</summary>
+    private bool HandleMiddle(int message, long ticks, in MsLlHookStruct info)
+    {
+        bool classic = Mode == MouseInputMode.Middle;
+        bool decide = Enabled && (classic || GesturesEnabled);
+        if (message == WmMDown)
+        {
+            string? bypass = decide ? _inspector.Bypass(info.X, info.Y, replays: false) : null;
+            _middleBypassed = bypass is not null;
+            if (!decide || _middleBypassed)
+            {
+                _middleDecision.Reset();
+                _gesture.Cancel();
+                _gestureReady = false;
+                RawButtonEvent?.Invoke(new("中键", true, ticks, false, bypass is null ? "原始事件透传" : "透传，不识别手势：" + bypass));
+                return false;
+            }
+
+            var step = _middleDecision.Down(ToMs(ticks), info.X, info.Y, classic, GesturesEnabled);
+            if (step == MiddleDecisionStep.Swallow) FreezeContext(info.X, info.Y);
+            _gesture.Configure(GestureMinDistancePx);
+            _gesture.Start(info.X, info.Y);
+            _gestureReady = GesturesEnabled;
+            RawButtonEvent?.Invoke(new("中键", true, ticks, true, classic ? "中键延迟决策（经典模式）" : "中键延迟决策（手势）"));
+            return step == MiddleDecisionStep.Swallow;
+        }
+
+        if (message == WmMUp)
+        {
+            if (_middleDecision.IsPassthrough || _middleDecision.IsIdle && !_middleDecision.IsHolding)
+            {
+                // Idle + not holding: we never intercepted this press (or already handed it to the system).
+                if (_middleDecision.IsPassthrough)
+                {
+                    _middleDecision.Up(ToMs(ticks));
+                    RawButtonEvent?.Invoke(new("中键", false, ticks, false, "放行后的中键松开"));
+                }
+                return false;
+            }
+
+            if (!_middleDecision.IsHolding && !_middleDecision.IsPassthrough)
+                return false;
+
+            var step = _middleDecision.Up(ToMs(ticks));
+            string? direction = _gestureReady ? _gesture.End(info.X, info.Y) : null;
+            _gestureReady = false;
+
+            switch (step)
+            {
+                case MiddleDecisionStep.Gesture:
+                    _middle.Disarm();
+                    ReleaseContext();
+                    if (direction is not null)
+                    {
+                        GestureEvent?.Invoke(direction);
+                        RawButtonEvent?.Invoke(new("中键", false, ticks, true, $"方向手势 {direction}"));
+                    }
+                    else
+                    {
+                        RawButtonEvent?.Invoke(new("中键", false, ticks, true, "达到手势距离但方向不明确，已取消"));
+                    }
+                    return true;
+                case MiddleDecisionStep.ReplayClick:
+                    _middle.Disarm();
+                    ReleaseContext();
+                    Inject(MouseEventMiddleDown, MouseEventMiddleUp);
+                    RawButtonEvent?.Invoke(new("中键", false, ticks, true, "短点，补发中键单击"));
+                    return true;
+                case MiddleDecisionStep.Arm:
+                    _middle.ForceArm(ToMs(ticks));
+                    StateChanged?.Invoke($"中键长按激活：7 秒内用左键输入节奏（鼠标移动超过 {_middle.MovementTolerancePx}px 不激活）");
+                    RawButtonEvent?.Invoke(new("中键", false, ticks, true, "激活成功，不补发中键"));
+                    return true;
+                case MiddleDecisionStep.Cancel:
+                    _middle.Disarm();
+                    ReleaseContext();
+                    RawButtonEvent?.Invoke(new("中键", false, ticks, true, "中键按住已取消"));
+                    return true;
+                case MiddleDecisionStep.Pass:
+                    return false;
+                default:
+                    return true;
+            }
+        }
+
+        return false;
     }
 
     private void ChordNote(long ticks, string note) => RawButtonEvent?.Invoke(new("右键", true, ticks, false, note));
@@ -305,6 +434,7 @@ public sealed class MouseHook : IDisposable
         };
         if (message == WmRDown && step == ChordStep.Swallow)
         {
+            FreezeContext(info.X, info.Y);
             RawButtonEvent?.Invoke(new("右键", true, ticks, true, injected ? $"和弦：等待左键节奏（模拟输入，标记 0x{info.ExtraInfo:X}）" : "和弦：等待左键节奏"));
             ChordEvent?.Invoke(ChordStep.Swallow, ticks);
         }
@@ -318,11 +448,13 @@ public sealed class MouseHook : IDisposable
                 ChordNote(ticks, message == WmMove
                     ? $"按住时移动 {Math.Sqrt(dx * dx + dy * dy):0} px（阈值 {_chord.MovementTolerancePx}），按拖拽处理，补发右键按下并放行"
                     : "按住时滚动滚轮，补发右键按下并放行");
+                ReleaseContext();
                 ChordEvent?.Invoke(ChordStep.ReplayDown, ticks);
                 return false;
             case ChordStep.ReplayClick:
                 Inject(MouseEventRightDown, MouseEventRightUp);
                 RawButtonEvent?.Invoke(new("右键", false, ticks, false, "未输入节奏，补发右键单击"));
+                ReleaseContext();
                 ChordEvent?.Invoke(ChordStep.ReplayClick, ticks);
                 return true;
             case ChordStep.Begin:
@@ -344,6 +476,7 @@ public sealed class MouseHook : IDisposable
                 return true;
             case ChordStep.Cancel:
                 RawButtonEvent?.Invoke(new("滚轮", true, ticks, true, "和弦：滚动滚轮，取消本次输入"));
+                ReleaseContext();
                 ChordEvent?.Invoke(step, ticks);
                 return true;
             default:
@@ -375,7 +508,14 @@ public sealed class MouseHook : IDisposable
     }
 
     /// <summary>Replays the held right press where it happened, then returns the cursor to (x, y) or its current position.</summary>
-    private void ReplayPressAtOrigin(int? x = null, int? y = null)
+    private void ReplayPressAtOrigin(int? x = null, int? y = null) =>
+        ReplayButtonDownAt(_chord.OriginX, _chord.OriginY, MouseEventRightDown, x, y);
+
+    /// <summary>Hands a held middle press to the system at the original press point (autoscroll / pan).</summary>
+    private void ReplayMiddleDownAtOrigin() =>
+        ReplayButtonDownAt(_middleDecision.OriginX, _middleDecision.OriginY, MouseEventMiddleDown);
+
+    private void ReplayButtonDownAt(int originX, int originY, uint downFlag, int? x = null, int? y = null)
     {
         // Hook coordinates are physical pixels; measure the desktop the same way regardless of process DPI awareness.
         _lastReplayMs = ToMs(Stopwatch.GetTimestamp());
@@ -386,8 +526,8 @@ public sealed class MouseHook : IDisposable
             GetCursorPos(out var now);
             var inputs = new[]
             {
-                AbsoluteMove(_chord.OriginX, _chord.OriginY),
-                new Input { Type = 0, Mouse = new MouseInput { Flags = MouseEventRightDown, ExtraInfo = InjectionMarker } },
+                AbsoluteMove(originX, originY),
+                new Input { Type = 0, Mouse = new MouseInput { Flags = downFlag, ExtraInfo = InjectionMarker } },
                 AbsoluteMove(x ?? now.X, y ?? now.Y),
             };
             SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<Input>());
@@ -422,7 +562,11 @@ public sealed class MouseHook : IDisposable
         {
             _chord.Cancel();
             _gesture.Cancel(); _gestureReady = false;
-            _middle.Disarm(); _leftIsDown = false;
+            _middle.Disarm();
+            _middleDecision.Reset();
+            _leftIsDown = false;
+            _contextFrozen = false;
+            SessionContext = ContextSnapshot.Desktop;
         }
         StateChanged?.Invoke("已取消本次输入");
     }
@@ -433,6 +577,7 @@ public sealed class MouseHook : IDisposable
         {
             finished = _middle.Armed && !_leftIsDown;
             if (finished) _middle.Disarm();
+            // Context stays frozen until the controller finishes building the ExecutionRequest, then ReleaseContext().
         }
         if (finished) StateChanged?.Invoke("本次中键节奏输入已结束");
     }

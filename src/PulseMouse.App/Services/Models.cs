@@ -7,7 +7,9 @@ public enum LivePhase { Idle, Armed, Press, Typing, Matched, Miss, Reset }
 
 public enum ActivityType { Ok, Gesture, Miss, Failed, System }
 
-public sealed record ActivityEntry(DateTime Time, ActivityType Type, string Title, string Pattern = "", ActionKind? Kind = null, string Target = "", string Direction = "");
+public sealed record ActivityEntry(
+    DateTime Time, ActivityType Type, string Title, string Pattern = "", ActionKind? Kind = null,
+    string Target = "", string Direction = "", string Context = "", bool Own = false);
 
 public enum LogTone { None, Hit, Pass, Err }
 

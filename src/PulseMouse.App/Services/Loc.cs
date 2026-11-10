@@ -9,7 +9,7 @@ public static class Loc
 {
     public static bool English { get; set; }
 
-    private static string T(string zh, string en) => English ? en : zh;
+    public static string T(string zh, string en) => English ? en : zh;
 
     public static string Nav(Page page) => page switch
     {
@@ -25,10 +25,10 @@ public static class Loc
     public static string Description(Page page) => page switch
     {
         Page.Dashboard => T("实时观察节奏输入、监听状态与最近执行。", "Monitor rhythm input, listening status and recent runs."),
-        Page.Commands => T("把节奏绑定到快捷键、程序、文件夹、网页与工作流。", "Bind rhythms to shortcuts, apps, folders, websites and workflows."),
-        Page.Gestures => T("按住中键向四个方向移动，松开后执行。", "Hold the middle button, move, release to run."),
+        Page.Commands => T("全局定义默认含义；每个程序可以把非固定的节奏改成自己的含义。", "Globals set defaults; each app can override unpinned rhythms."),
+        Page.Gestures => T("按下中键就拖触发手势；短点仍是系统中键；静止按住一会儿交给系统滚动。", "Press middle and drag for a gesture; a short click stays a middle-click; hold still to let the system autoscroll."),
         Page.Workflows => T("把多个本地动作串成一条节奏指令，执行前确认。", "Chain local actions into one rhythm, confirmed before running."),
-        _ => T("行为、节奏识别、Pulse Capsule、数据与备份。", "Behavior, timing, Pulse Capsule, data and backup.")
+        _ => T("通用、情境、鼠标拦截、节奏识别、胶囊与备份。", "General, context, interception, rhythm, capsule and backup.")
     };
 
     public static string Kind(ActionKind kind) => kind switch
@@ -37,6 +37,7 @@ public static class Loc
         ActionKind.Url => T("网址", "URL"),
         ActionKind.Workflow => T("工作流", "Workflow"),
         ActionKind.Shortcut => T("快捷键", "Shortcut"),
+        ActionKind.Repeat => T("重复上一次", "Repeat last"),
         _ => T("应用", "App")
     };
 

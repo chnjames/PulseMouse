@@ -31,9 +31,11 @@ public sealed class FeedbackWindow : Window
     private readonly Icon _orbIcon = new() { Size = 18, HorizontalAlignment = System.Windows.HorizontalAlignment.Center, VerticalAlignment = VerticalAlignment.Center };
     private readonly PatternGlyph _glyph = new() { GlyphSize = GlyphSize.Medium, VerticalAlignment = VerticalAlignment.Center, MinWidth = 24 };
     private readonly FrameworkElement _divider;
+    private readonly TrackedText _label;
     private readonly TextBlock _text;
     private readonly TranslateTransform _slide = new();
     private readonly DispatcherTimer _hideTimer;
+    private readonly TrackedText _hintTitle;
     private string _position = "Center";
     private bool _breathing = true;
     private int _version;
@@ -41,7 +43,8 @@ public sealed class FeedbackWindow : Window
 
     private static SolidColorBrush B(byte a, byte r, byte g, byte b) { var x = new SolidColorBrush(System.Windows.Media.Color.FromArgb(a, r, g, b)); x.Freeze(); return x; }
     private static readonly SolidColorBrush Mint = B(255, 0x51, 0xE6, 0xCA), MintDim = B(0x1F, 0x51, 0xE6, 0xCA), MintEdge = B(0x70, 0x51, 0xE6, 0xCA),
-        Coral = B(255, 0xE2, 0x7E, 0x68), CoralDim = B(0x21, 0xE2, 0x7E, 0x68), CoralEdge = B(0xCC, 0xE2, 0x7E, 0x68);
+        Coral = B(255, 0xE2, 0x7E, 0x68), CoralDim = B(0x21, 0xE2, 0x7E, 0x68), CoralEdge = B(0xCC, 0xE2, 0x7E, 0x68),
+        Amber = B(255, 0xF0, 0xB4, 0x5A), AmberDim = B(0x28, 0xF0, 0xB4, 0x5A), AmberEdge = B(0xCC, 0xF0, 0xB4, 0x5A);
 
     public FeedbackWindow()
     {
@@ -59,7 +62,7 @@ public sealed class FeedbackWindow : Window
 
         _orb = new Border { Width = 36, Height = 36, CornerRadius = new CornerRadius(18), Child = _orbIcon, VerticalAlignment = VerticalAlignment.Center };
         _divider = new Border { Width = 1, Height = 22, Background = B(0x1F, 255, 255, 255), Margin = new Thickness(12, 0, 12, 0), VerticalAlignment = VerticalAlignment.Center };
-        var label = new TrackedText
+        _label = new TrackedText
         {
             Text = "PULSE CAPSULE", FontSize = 9.5, Tracking = 1.14, FontWeight = FontWeights.SemiBold,
             FontFamily = new System.Windows.Media.FontFamily("Cascadia Mono, Consolas"), Foreground = B(255, 0x6E, 0x7D, 0x82),
@@ -71,7 +74,7 @@ public sealed class FeedbackWindow : Window
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI")
         };
         var texts = new StackPanel { VerticalAlignment = VerticalAlignment.Center };
-        texts.Children.Add(label);
+        texts.Children.Add(_label);
         texts.Children.Add(_text);
 
         var row = new DockPanel { LastChildFill = true };
@@ -98,12 +101,13 @@ public sealed class FeedbackWindow : Window
         _hintTypedGlyph.Foreground = Mint;
         DockPanel.SetDock(_hintTyped, Dock.Right);
         hintHeader.Children.Add(_hintTyped);
-        hintHeader.Children.Add(new TrackedText
+        _hintTitle = new TrackedText
         {
             Text = "可用节奏", FontSize = 9.5, Tracking = 1.14, FontWeight = FontWeights.SemiBold,
             FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI"), Foreground = B(255, 0x6E, 0x7D, 0x82),
             VerticalAlignment = VerticalAlignment.Center
-        });
+        };
+        hintHeader.Children.Add(_hintTitle);
         _hintFooter = new TextBlock { FontSize = 11.5, Foreground = B(255, 0x6E, 0x7D, 0x82), Margin = new Thickness(0, 6, 0, 0), TextTrimming = TextTrimming.CharacterEllipsis };
         _hint = new Border
         {
@@ -136,13 +140,18 @@ public sealed class FeedbackWindow : Window
         _breathing = breathing;
     }
 
-    public void ShowState(FeedbackMode mode, string pattern, string text, IconKind? icon)
+    public void ShowState(FeedbackMode mode, string pattern, string text, IconKind? icon, bool reminding = false, string? contextLine = null)
     {
         _hideTimer.Stop();
         bool failed = mode == FeedbackMode.Failed;
-        _pill.BorderBrush = failed ? CoralEdge : MintEdge;
-        _orb.Background = failed ? CoralDim : MintDim;
-        _orbIcon.Foreground = _glyph.Foreground = failed ? Coral : Mint;
+        var edge = failed ? CoralEdge : reminding ? AmberEdge : MintEdge;
+        var dim = failed ? CoralDim : reminding ? AmberDim : MintDim;
+        var fg = failed ? Coral : reminding ? Amber : Mint;
+        _pill.BorderBrush = edge;
+        _orb.Background = dim;
+        _orbIcon.Foreground = _glyph.Foreground = fg;
+        _label.Foreground = reminding ? Amber : B(255, 0x6E, 0x7D, 0x82);
+        _label.Text = string.IsNullOrWhiteSpace(contextLine) ? "PULSE CAPSULE" : contextLine;
         _orbIcon.Kind = icon ?? mode switch
         {
             FeedbackMode.Matched => IconKind.Check,
@@ -177,7 +186,8 @@ public sealed class FeedbackWindow : Window
         if (mode is FeedbackMode.Matched or FeedbackMode.Failed)
         {
             HideHint();
-            _hideTimer.Interval = TimeSpan.FromMilliseconds(failed ? 1600 : 1150);
+            // New-meaning reminder stays a bit longer (spec 5.8: ~2.2 s vs ~1.4 s).
+            _hideTimer.Interval = TimeSpan.FromMilliseconds(failed ? 1600 : reminding ? 2200 : 1400);
             _hideTimer.Start();
         }
     }
@@ -192,25 +202,34 @@ public sealed class FeedbackWindow : Window
     public bool HintVisible => _hint.Visibility == Visibility.Visible && IsVisible && !_fading;
 
     /// <summary>Lists the rhythms still reachable from <paramref name="typed"/> above the pill (which must already be showing).</summary>
-    public void ShowHint(string typed, IReadOnlyList<(string Pattern, string Name)> items, int hidden)
+    public void ShowHint(string typed, IReadOnlyList<(string Pattern, string Name, string Tag)> items, int hidden, string? title = null)
     {
+        _hintTitle.Text = string.IsNullOrWhiteSpace(title) ? "可用节奏" : title;
         _hintTyped.Visibility = typed.Length > 0 ? Visibility.Visible : Visibility.Collapsed;
         _hintTypedGlyph.Pattern = typed;
         _hintRows.Children.Clear();
-        foreach (var (pattern, name) in items)
+        foreach (var (pattern, name, tag) in items)
         {
             var row = new Grid { Height = 26 };
             row.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(78) });
             row.ColumnDefinitions.Add(new ColumnDefinition());
+            row.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
             var glyph = new PatternGlyph { GlyphSize = GlyphSize.Small, Pattern = pattern, Foreground = Mint, VerticalAlignment = VerticalAlignment.Center, HorizontalAlignment = System.Windows.HorizontalAlignment.Left };
             var label = new TextBlock
             {
                 Text = name, FontSize = 13, Foreground = B(255, 0xF2, 0xF7, 0xF8), VerticalAlignment = VerticalAlignment.Center, TextTrimming = TextTrimming.CharacterEllipsis,
                 FontFamily = new System.Windows.Media.FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI")
             };
+            var tagBlock = new TextBlock
+            {
+                Text = tag, FontSize = 11, Foreground = tag.Contains('替') ? Amber : B(255, 0x6E, 0x7D, 0x82),
+                VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(8, 0, 0, 0)
+            };
             Grid.SetColumn(label, 1);
+            Grid.SetColumn(tagBlock, 2);
             row.Children.Add(glyph);
             row.Children.Add(label);
+            if (tag.Length > 0) row.Children.Add(tagBlock);
             _hintRows.Children.Add(row);
         }
         _hintFooter.Text = items.Count == 0 ? "没有以此开头的指令" : hidden > 0 ? $"还有 {hidden} 个，继续敲以缩小范围" : "";

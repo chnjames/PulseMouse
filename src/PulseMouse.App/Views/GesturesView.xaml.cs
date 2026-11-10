@@ -35,6 +35,11 @@ public partial class GesturesView : System.Windows.Controls.UserControl, IPageVi
         EnabledSwitch.IsChecked = _c.Settings.GesturesEnabled;
         DistanceSlider.Value = _c.Settings.GestureMinDistancePx;
         DistanceText.Text = $"{_c.Settings.GestureMinDistancePx} px";
+        ClickMaxSlider.Value = _c.Settings.MiddleClickMaxMs;
+        ClickMaxText.Text = $"{_c.Settings.MiddleClickMaxMs} ms";
+        PassThroughSlider.Value = _c.Settings.MiddlePassThroughMs;
+        PassThroughText.Text = _c.Settings.MiddlePassThroughMs == 0 ? "0 (off)" : $"{_c.Settings.MiddlePassThroughMs} ms";
+        PreserveSwitch.IsChecked = _c.Settings.PreserveMiddleClick;
         Tile(_direction).IsChecked = true;
         _syncing = false;
         RefreshPad();
@@ -48,6 +53,20 @@ public partial class GesturesView : System.Windows.Controls.UserControl, IPageVi
         Header.Eyebrow = Loc.Eyebrow(Page.Gestures);
         Header.Heading = Loc.Nav(Page.Gestures);
         Header.Description = Loc.Description(Page.Gestures);
+        DistanceName.Text = Loc.T("最小移动距离", "Min distance");
+        DistanceDesc.Text = Loc.T("按下后拖动达到此距离 = 方向手势", "Drag at least this far after pressing = gesture");
+        ClickMaxName.Text = Loc.T("单击上限", "Click max");
+        ClickMaxDesc.Text = Loc.T("静止且短于此时长松开 → 补发系统中键单击", "Released still and under this → replay system middle-click");
+        PassThroughName.Text = Loc.T("静止放行", "Hold-still pass-through");
+        PassThroughDesc.Text = Loc.T("静止按住达到此时长 → 交给系统；0 = 关闭", "Held still this long → hand to the system; 0 = off");
+        PreserveName.Text = Loc.T("保留中键单击", "Preserve middle click");
+        PreserveDesc.Text = Loc.T("关闭后短点也不补发（进阶）", "Off = short clicks are not replayed (advanced)");
+        DecisionNote.Text = Loc.T(
+            "短点仍是系统中键；按下就拖是手势，不会带动页面滚动；静止按住一会儿再拖，仍是系统的自动滚动或平移。",
+            "Short clicks stay a system middle-click; press-and-drag is a gesture with no autoscroll; hold still, then drag for system autoscroll / pan.");
+        CadNoteRun.Text = Loc.T("CAD、Blender、Figma 等按下中键就拖动平移的程序：平移会变成手势。建议加入", "Apps that pan with press-and-drag middle (CAD, Blender, Figma): panning becomes a gesture. Add them to ");
+        ExcludedLinkRun.Text = Loc.T("排除的程序", "Excluded apps");
+        CadNoteTailRun.Text = Loc.T("，或先静止按住再拖。", ", or hold still before dragging.");
     }
 
     public void Reload() { if (IsLoaded) OnShown(); }
@@ -171,4 +190,44 @@ public partial class GesturesView : System.Windows.Controls.UserControl, IPageVi
         _c.ApplySettings();
         _c.SaveSoon();
     }
+
+    private void ClickMaxChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncing || !IsLoaded) return;
+        int value = (int)Math.Round(ClickMaxSlider.Value);
+        ClickMaxText.Text = $"{value} ms";
+        _c.Settings.MiddleClickMaxMs = value;
+        _c.Settings.MiddlePassThroughMs = MiddleDecision.NormalizePassThroughMs(_c.Settings.MiddlePassThroughMs, value);
+        if (!_syncing)
+        {
+            _syncing = true;
+            PassThroughSlider.Value = _c.Settings.MiddlePassThroughMs;
+            PassThroughText.Text = _c.Settings.MiddlePassThroughMs == 0 ? "0 (off)" : $"{_c.Settings.MiddlePassThroughMs} ms";
+            _syncing = false;
+        }
+        _c.ApplySettings();
+        _c.SaveSoon();
+    }
+
+    private void PassThroughChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+    {
+        if (_syncing || !IsLoaded) return;
+        int value = (int)Math.Round(PassThroughSlider.Value);
+        // Snap low non-zero values up so the control can still reach 0 to disable.
+        if (value is > 0 and < 400) value = 400;
+        value = MiddleDecision.NormalizePassThroughMs(value, _c.Settings.MiddleClickMaxMs);
+        PassThroughText.Text = value == 0 ? "0 (off)" : $"{value} ms";
+        _c.Settings.MiddlePassThroughMs = value;
+        _c.ApplySettings();
+        _c.SaveSoon();
+    }
+
+    private void PreserveClick(object sender, RoutedEventArgs e)
+    {
+        _c.Settings.PreserveMiddleClick = PreserveSwitch.IsChecked == true;
+        _c.ApplySettings();
+        _c.Save();
+    }
+
+    private void ExcludedLinkClick(object sender, RoutedEventArgs e) => _shell.Navigate(Page.Settings);
 }

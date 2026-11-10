@@ -37,4 +37,13 @@ public sealed class MiddleActivation
     }
     public void Extend(long ms, int extensionMs) { if (Armed) ArmedUntilMs = ms + extensionMs; }
     public void Disarm() { Armed = false; _downAt = null; _moved = false; }
+
+    /// <summary>Arm rhythm input after the delay decision already swallowed the hold (v0.9 middle path).</summary>
+    public void ForceArm(long ms)
+    {
+        _downAt = null;
+        _moved = false;
+        Armed = true;
+        ArmedUntilMs = ms + ArmDurationMs;
+    }
 }

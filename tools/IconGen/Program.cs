@@ -4,7 +4,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using PulseMouse.App.Services;
 
-// Usage: IconGen <ico-path> [preview-png-path]
+// Usage: IconGen <ico-path> [preview-png-path] [logo-png-path]
 internal static class Program
 {
     [STAThread]
@@ -19,11 +19,16 @@ internal static class Program
             Preview(args[1]);
             TrayPreview(Path.ChangeExtension(args[1], null) + "-tray.png");
         }
+        if (args.Length > 2)
+        {
+            Logo(args[2]);
+        }
     }
 
     /// <summary>Draws the real tray HICONs (the path NotifyIcon uses) on light and dark taskbars, zoomed 8x.</summary>
     private static void TrayPreview(string path)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         var tones = new[] { IconTone.Active, IconTone.Paused, IconTone.Blocked };
         using var strip = new System.Drawing.Bitmap(3 * 40 + 8, 2 * 32);
         using (var g = System.Drawing.Graphics.FromImage(strip))
@@ -58,6 +63,7 @@ internal static class Program
 
     private static void Preview(string path)
     {
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
         const int width = 1240, height = 900;
         var tones = new[] { IconTone.Active, IconTone.Paused, IconTone.Blocked };
         var visual = new DrawingVisual();
@@ -110,5 +116,18 @@ internal static class Program
         using var fs = File.Create(path);
         encoder.Save(fs);
         Console.WriteLine("preview: " + path);
+    }
+
+    /// <summary>Exports the canonical 1:1 application mark for stores and product listings.</summary>
+    private static void Logo(string path)
+    {
+        const int size = 1024;
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+        var bitmap = AppIcon.Render(size, IconTone.Active, dark: true);
+        var encoder = new PngBitmapEncoder();
+        encoder.Frames.Add(BitmapFrame.Create(bitmap));
+        using var fs = File.Create(path);
+        encoder.Save(fs);
+        Console.WriteLine("logo: " + path);
     }
 }

@@ -63,6 +63,10 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
         Header.Eyebrow = Loc.Eyebrow(Page.Dashboard);
         Header.Heading = Loc.Nav(Page.Dashboard);
         Header.Description = Loc.Description(Page.Dashboard);
+        TodayLabel.Text = Loc.T("今日执行", "Runs today");
+        BoundLabel.Text = Loc.T("在用的节奏", "Rhythms in use");
+        WeekLabel.Text = Loc.T("有专属含义的程序", "Apps with own meanings");
+        if (_visible) RefreshStats();
     }
 
     public void Reload() { if (_visible) OnShown(); }
@@ -76,13 +80,22 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
         var week = (s.History ?? new()).TakeLast(7).ToList();
         int runs = week.Sum(d => d.Executions), misses = week.Sum(d => d.Misses);
         TodaySub.Text = week.Count == 0
-            ? $"未匹配 {s.MissesToday} 次"
-            : $"未匹配 {s.MissesToday} 次 · 前 {week.Count} 天日均 {runs / (double)week.Count:0.#} 次，未匹配率 {(runs + misses == 0 ? 0 : misses * 100.0 / (runs + misses)):0}%";
-        BoundValue.Text = s.Commands.Count.ToString();
-        int gestures = s.Gestures.Count(g => Directions.All.Contains(g.Direction));
-        int workflows = s.Commands.Count(c => c.ActionKind == ActionKind.Workflow);
-        BoundSub.Text = $"另有 {gestures} 个方向手势 · 其中 {workflows} 个工作流";
-        WeekValue.Text = $"{_c.WeeklySeconds / 3600:0.0}h";
+            ? Loc.T($"未匹配 {s.MissesToday} 次", $"{s.MissesToday} misses")
+            : Loc.T($"未匹配 {s.MissesToday} 次 · 前 {week.Count} 天日均 {runs / (double)week.Count:0.#} 次，未匹配率 {(runs + misses == 0 ? 0 : misses * 100.0 / (runs + misses)):0}%",
+                $"{s.MissesToday} misses · {week.Count}-day avg {runs / (double)week.Count:0.#}, miss rate {(runs + misses == 0 ? 0 : misses * 100.0 / (runs + misses)):0}%");
+        int patterns = s.Commands.Select(c => c.Pattern).Distinct().Count();
+        int pinned = s.Commands.Count(c => c.Scope.Length == 0 && c.Pinned);
+        int flexible = s.Commands.Count(c => c.Scope.Length == 0 && !c.Pinned);
+        BoundValue.Text = patterns.ToString();
+        BoundSub.Text = Loc.T($"{pinned} 个固定 · {flexible} 个可按程序改", $"{pinned} pinned · {flexible} overridable");
+        int apps = s.ContextApps.Count;
+        int replaces = s.Commands.Count(c => c.Scope.Length > 0 && s.Commands.Global(c.Pattern) is not null);
+        WeekValue.Text = apps.ToString();
+        WeekSub.Text = replaces > 0
+            ? Loc.T($"{replaces} 处替换了全局含义", $"{replaces} override(s) of globals")
+            : s.ActivationFailedToday > 0
+                ? Loc.T($"今日激活失败 {s.ActivationFailedToday} 次", $"{s.ActivationFailedToday} activation failure(s) today")
+                : Loc.T("程序列表独立于指令保存", "App list is stored separately from commands");
     }
 
     private void RefreshRoute()
@@ -282,14 +295,25 @@ public partial class DashboardView : System.Windows.Controls.UserControl, IPageV
         var sub = new StackPanel { Orientation = System.Windows.Controls.Orientation.Horizontal, Margin = new Thickness(0, 3, 0, 0) };
         void Text(string text) => sub.Children.Add(new TextBlock { Text = text, FontSize = 11.5, Foreground = Ui.Brush("Text3Brush"), Margin = new Thickness(0, 0, 7, 0), TextTrimming = TextTrimming.CharacterEllipsis, VerticalAlignment = VerticalAlignment.Center });
         void Glyph(string pattern) => sub.Children.Add(new PatternGlyph { Pattern = pattern, Foreground = Ui.Brush("Text2Brush"), VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 7, 0) });
+        string ContextNote()
+        {
+            if (a.Context.Length == 0 || a.Context == ContextNames.Desktop) return a.Own ? "" : Loc.T("全局", "Global");
+            return a.Own
+                ? Loc.T($"{a.Context} 中的含义", $"Meaning in {a.Context}")
+                : Loc.T($"全局 · 在 {a.Context}", $"Global · in {a.Context}");
+        }
         switch (a.Type)
         {
             case ActivityType.Ok:
-                Glyph(a.Pattern); Text("·"); Text(a.Kind is { } kind ? Loc.Kind(kind) : ""); Text("·"); Text(a.Target); break;
+                Glyph(a.Pattern); Text("·"); Text(a.Kind is { } kind ? Loc.Kind(kind) : ""); Text("·"); Text(ContextNote()); break;
             case ActivityType.Gesture:
                 Text($"手势 · 向{Directions.Zh(a.Direction)}"); Text("·"); Text(a.Target); break;
             case ActivityType.Miss:
-                Glyph(a.Pattern); Text("· 没有绑定此节奏"); break;
+                Glyph(a.Pattern);
+                Text(a.Context.Length > 0 && a.Context != ContextNames.Desktop
+                    ? Loc.T($"· {a.Context} 中没有这个节奏", $"· no match in {a.Context}")
+                    : "· 没有绑定此节奏");
+                break;
             case ActivityType.Failed:
                 if (a.Pattern.Length > 0) Glyph(a.Pattern);
                 Text(a.Target); break;

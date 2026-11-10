@@ -11,7 +11,8 @@ public static class TargetField
     {
         ActionKind.Folder => ("文件夹", @"D:\Projects", "打开前会检查目录是否存在", true),
         ActionKind.Url => ("网址", "https://", "仅支持 http:// 或 https://", false),
-        ActionKind.Shortcut => ("快捷键", "点这里，然后按下组合键", "发送到当前前台窗口；Win 组合键请用下方常用项，退格键清空", false),
+        ActionKind.Shortcut => ("快捷键", "点这里，然后按下组合键", "默认先激活光标下的窗口再发送；可在设置 › 情境中关闭", false),
+        ActionKind.Repeat => ("重复上一次", "", "执行最近一次成功的节奏指令或手势（不含工作流与重复本身）", false),
         _ => ("程序", @"notepad.exe 或 C:\…\app.exe", "支持 .exe / .lnk，可使用 %环境变量%", true)
     };
 
@@ -39,13 +40,14 @@ public static class TargetField
     }
 
     public static int KindIndex(ActionKind kind) => (int)kind;
-    public static ActionKind KindAt(int index) => index is >= 0 and <= 4 ? (ActionKind)index : ActionKind.Application;
+    public static ActionKind KindAt(int index) => index is >= 0 and <= 5 ? (ActionKind)index : ActionKind.Application;
 
     /// <summary>Common shortcuts offered as one-click presets (Win combinations cannot be recorded by pressing them).</summary>
     public static readonly (string Name, string Keys)[] ShortcutPresets =
     [
         ("复制", "Ctrl+C"), ("粘贴", "Ctrl+V"), ("撤销", "Ctrl+Z"), ("关闭标签", "Ctrl+W"), ("恢复标签", "Ctrl+Shift+T"),
-        ("下一个标签", "Ctrl+Tab"), ("切换窗口", "Alt+Tab"), ("显示桌面", "Win+D"), ("截图", "Win+Shift+S"),
+        ("下一个标签", "Ctrl+Tab"), ("前进", "Alt+Right"), ("后退", "Alt+Left"),
+        ("切换窗口", "Alt+Tab"), ("显示桌面", "Win+D"), ("截图", "Win+Shift+S"),
         ("静音", "VolumeMute"), ("播放/暂停", "MediaPlayPause"),
     ];
 }

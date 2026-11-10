@@ -54,7 +54,7 @@ public sealed class RhythmEngine
         var pattern = _sequence;
         Reset();
         if (pattern.Length == 0) return;
-        var match = _settings().Commands.FirstOrDefault(c => c.Pattern == pattern);
-        Completed?.Invoke(new Recognition(pattern, match));
+        // Engine only emits the rhythm; ContextResolver fills Command on the UI/controller side.
+        Completed?.Invoke(new Recognition(pattern, null));
     }
 }

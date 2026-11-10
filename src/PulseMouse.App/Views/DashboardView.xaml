@@ -19,22 +19,22 @@
             <ContentControl Style="{StaticResource Card}" Padding="18,16">
                 <StackPanel>
                     <TextBlock x:Name="TodayValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource MintBrush}"/>
-                    <TextBlock Text="今日执行" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="TodayLabel" Text="今日执行" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
                     <TextBlock x:Name="TodaySub" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
                 </StackPanel>
             </ContentControl>
             <ContentControl Grid.Column="2" Style="{StaticResource Card}" Padding="18,16">
                 <StackPanel>
                     <TextBlock x:Name="BoundValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold" Foreground="{StaticResource BlueBrush}"/>
-                    <TextBlock Text="已绑定指令" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="BoundLabel" Text="在用的节奏" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
                     <TextBlock x:Name="BoundSub" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
                 </StackPanel>
             </ContentControl>
             <ContentControl Grid.Column="4" Style="{StaticResource Card}" Padding="18,16">
                 <StackPanel>
                     <TextBlock x:Name="WeekValue" FontFamily="{StaticResource DisplayFont}" FontSize="26" FontWeight="SemiBold"/>
-                    <TextBlock Text="本周运行时长" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
-                    <TextBlock Text="按 PulseMouse 进程运行时间统计" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
+                    <TextBlock x:Name="WeekLabel" Text="有专属含义的程序" FontSize="12.5" Foreground="{StaticResource Text2Brush}" Margin="0,4,0,0"/>
+                    <TextBlock x:Name="WeekSub" FontSize="11.5" Foreground="{StaticResource Text3Brush}" Margin="0,8,0,0"/>
                 </StackPanel>
             </ContentControl>
         </Grid>

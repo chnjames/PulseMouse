@@ -1,0 +1,26 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore PulseMouse.slnx
+      - name: Build
+        run: dotnet build PulseMouse.slnx -c Release --no-restore
+      - name: Run Core smoke tests
+        run: dotnet run --project tests/PulseMouse.Core.SmokeTests -c Release --no-build

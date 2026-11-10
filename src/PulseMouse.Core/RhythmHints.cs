@@ -1,14 +1,13 @@
 namespace PulseMouse.Core;
 
-/// <summary>Commands still reachable from what has been typed, shortest rhythms first.</summary>
+/// <summary>Commands still reachable from what has been typed. Prefer <see cref="ContextResolver.Reachable"/> when context is known.</summary>
 public static class RhythmHints
 {
-    public static (IReadOnlyList<CommandBinding> Shown, int Hidden) For(IEnumerable<CommandBinding> commands, string prefix, int max)
-    {
-        var matches = commands
-            .Where(c => !string.IsNullOrEmpty(c.Pattern) && c.Pattern.StartsWith(prefix, StringComparison.Ordinal))
-            .OrderBy(c => c.Pattern.Length).ThenBy(c => c.Pattern, StringComparer.Ordinal)
-            .ToList();
-        return (matches.Take(max).ToList(), Math.Max(0, matches.Count - max));
-    }
+    public static (IReadOnlyList<CommandBinding> Shown, int Hidden) For(
+        IReadOnlyList<CommandBinding> commands, string prefix, int max) =>
+        commands.Reachable(ContextNames.Desktop, contextEnabled: false, prefix, max);
+
+    public static (IReadOnlyList<CommandBinding> Shown, int Hidden) ForContext(
+        IReadOnlyList<CommandBinding> commands, string context, bool contextEnabled, string prefix, int max = 6) =>
+        commands.Reachable(context, contextEnabled, prefix, max);
 }
