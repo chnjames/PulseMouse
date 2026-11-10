@@ -14,7 +14,17 @@
 
 Launchers and menus are great when you need to discover an action. PulseMouse is for the small set of actions you already know by heart: copy, screenshot, switch window, open a tool, or send a shortcut. Its rhythm input is designed to keep your attention and cursor where they already are.
 
-![PulseMouse concept visual: a mouse, cursor, and mint dot-dash pulse](docs/assets/pulsemouse-cover.png)
+![PulseMouse dashboard showing live rhythm input, action bindings, and input modes](docs/assets/screenshots/01-dashboard.jpg)
+
+## Screenshots
+
+| Command library | Direction gestures |
+| --- | --- |
+| ![The command library maps dot and dash rhythms to actions](docs/assets/screenshots/02-commands.jpg) | ![The direction-gesture editor maps middle-button directions to actions](docs/assets/screenshots/03-gestures.jpg) |
+| **Workflow builder** | **Settings and safety controls** |
+| ![The workflow builder shows confirmation-first multi-step automation](docs/assets/screenshots/04-workflows.jpg) | ![Settings show Context Pulse, on-screen feedback, and backup controls](docs/assets/screenshots/05-settings.jpg) |
+
+All screenshots above are captured from the running `v0.9.0` application. The [concept cover](docs/assets/pulsemouse-cover.png) is retained as brand artwork only; it is not a product UI screenshot.
 
 ## Highlights
 
