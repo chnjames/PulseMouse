@@ -46,6 +46,10 @@ v0.9 的核心是 **Context Pulse**。PulseMouse 会在开始输入时记录光�
 
 代码仓库：<https://github.com/chnjames/PulseMouse>
 
+## 现场可以演示什么
+
+运行 Windows 客户端：观众可用右键按住、左键输入点划节奏，实时看到节奏反馈并执行复制、截图等动作；再切换浏览器、资源管理器和表格，体验同一节奏按程序改变含义，也可现场配置方向手势与工作流。
+
 仓库建议为公开仓库，描述为：
 
 > Mouse-first shortcuts for Windows — tap rhythms to run commands without moving the pointer.
