@@ -40,7 +40,7 @@ v0.9 的核心是 **Context Pulse**。PulseMouse 会在开始输入时记录光�
 
 体验链接：<https://github.com/chnjames/PulseMouse/releases/tag/v0.9.0>
 
-这是源码预发布链接。用户可下载 GitHub 自动提供的 Source code，按照 README 使用 .NET 10 SDK 构建。便携版 Windows 附件会在网络恢复后补传，不要将其标注为已有下载包。
+这是 Windows x64 便携版预发布链接。下载 `PulseMouse-v0.9.0-win-x64.zip` 后解压全部文件，运行其中的 `PulseMouse.exe` 即可；压缩包旁附带 SHA-256 校验文件。当前版本尚无安装器、代码签名与自动更新。
 
 ## 代码仓库
 
